@@ -18,8 +18,7 @@ int main (int argc, const char * argv[]) {
 		exit(2);
 	}
 	std::string hmm_file  =	  argv[1];
-	std::string emissions =	  argv[2];
-	std::string seq_file  =	  argv[3];
+	std::string seq_file  =	  argv[2];
 
 	
 	/* decode & output */
