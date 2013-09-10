@@ -5,21 +5,41 @@
 \*****************************************************************************/
 
 #include <StochHMMlib.h>
+#include <unistd.h>
 
+static void usage () {
+	std::cout
+		<< "usage: genesmith [options] <hmm file> <seq file>\n"
+		<< "options:\n"
+		<< "  -g <file> genetic code (assumes -p and or -f)\n"
+		<< "  -p <file> profile HMM (requires -g)\n"
+		<< "  -f <file> protein fasta file (requires -g)\n"
+		<< std::endl;
+	exit(1);
+}
 
+int main (int argc, char ** argv) {
+	char * fasta_file   = NULL;
+	char * profile_file = NULL;
+	char * genetic_code = NULL;
+	int c;
+	extern char *optarg;
+	extern int optind;
 
-int main (int argc, const char * argv[]) {
-
-	/* command line */
-	std::string usage = "usage: genesmith <hmm file> <seq file>";
-	
-	if (argc != 2) {
-		std::cout << usage << std::endl;
-		exit(2);
+	/* process command line */
+	while ((c = getopt(argc, argv, "g:h:p:")) != -1) {
+		switch (c) {
+			case 'g': genetic_code = optarg; break;
+			case 'p': profile_file = optarg; break;
+			case 'f': fasta_file = optarg;   break;
+			case 'h': usage();
+			default:  usage();
+		}
 	}
+	
+	if (argc - optind != 2) usage();
 	std::string hmm_file  =	  argv[1];
 	std::string seq_file  =	  argv[2];
-
 	
 	/* decode & output */
 	StochHMM::model hmm;
@@ -37,3 +57,4 @@ int main (int argc, const char * argv[]) {
 	
 	return 0;
 }
+
