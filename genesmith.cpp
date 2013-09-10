@@ -7,6 +7,7 @@
 
 #include <StochHMMlib.h>
 #include <unistd.h>
+#include <hmmer.h>
 
 static void usage () {
 	std::cout
