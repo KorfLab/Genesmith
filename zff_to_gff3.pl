@@ -26,10 +26,10 @@ while (<ZFF>) {
 			my $strand = $f[1] < $f[2] ? '+' : '-';
 			if ($strand eq '-') {($f[1], $f[2]) = ($f[2], $f[1])}
 			print join("\t", $seq, 'snap', $Feature{$f[0]}, $f[1], $f[2], '.',
-				$strand, '.', $f[3]), "\n";
+				$strand, $f[3]), "\n";
 		} elsif (@f == 9) {
 			print join("\t", $seq, 'verified', $Feature{$f[0]}, $f[1], $f[2], '.',
-				$f[3], '.', $f[8]), "\n";
+				$f[3], $f[8]), "\n";
 		} else {die "input does not appear to be ZFF"}
 	}
 }
