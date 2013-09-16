@@ -8,7 +8,10 @@ our ($opt_h, $opt_v);
 getopts('hv');
 
 # Global Variables
-my $DATE = `date`; chomp($DATE);
+my $GENOMIC_TRANS	= "0.00021739";
+my $EXON_TRANS		= "0.00034963";
+my $INTRON_TRANS	= "0.00044256";
+my $TRACEBACK		= "[FUNCTION:	HMMER	TRACK:	SEQ	COMBINE_LABEL:	C	TO_LABEL:	S]";
 
 die "
 usage: $0 [options] <gff> <fasta>
@@ -24,7 +27,6 @@ my ($GFF, $DNA) = @ARGV;
 #-----------------------------------#
 my $genome = new HMMstar::Genome($DNA, $GFF);
 my %states;				# HMM hash
-my $state_count = 0;
 
 my %downst_em;
 my %upst_em;
@@ -91,46 +93,73 @@ foreach my $contig ($genome->contigs) {
 	}
 }
 
+# Format Emissions for HMM
+emission_table(\%downst_em, 'Genomic_S', 1, \%states);
+emission_table(\%start_em, 'Start', 0, \%states);
+emission_table(\%exon_em, 'Coding', 2, \%states);
+emission_table(\%donor_em, 'Don', 0, \%states);
+emission_table(\%intron_em, 'Intron', 1, \%states);
+emission_table(\%acceptor_em, 'Accep', 0, \%states);
+emission_table(\%stop_em, 'Stop', 0, \%states);
+emission_table(\%upst_em, 'Genomic_E', 1, \%states);
+
+
+
+#-------------------------------#
+#	Generate Transition Matrix	#
+#-------------------------------#
+my @model_states = (
+	'Genomic_S',
+	'Start0',
+	'Start1',
+	'Start2',
+	'Coding',
+	'Don0',
+	'Don1',
+	'Intron',
+	'Accep0',
+	'Accep1',
+	'Stop0',
+	'Stop1',
+	'Stop2',
+	'Genomic_E',
+);
+
+for (my $i = 0; $i < scalar(@model_states); $i++) {
+	my $order = $states{$model_states[$i]}{order};
+	 
+	if ($order == 0) {
+		$states{$model_states[$i]}{transition}{$model_states[$i+1]} = 1;
+	} elsif ($order == 1) {
+		if ($model_states[$i] =~ /_S$/) {
+			$states{$model_states[$i]}{transition}{$model_states[$i+1]}	= $GENOMIC_TRANS;
+			$states{$model_states[$i]}{transition}{$model_states[$i]}	= 1 - $GENOMIC_TRANS;
+		} elsif ($model_states[$i] =~ /^I/) {
+			$states{$model_states[$i]}{transition}{$model_states[$i+1]}	= $INTRON_TRANS;
+			$states{$model_states[$i]}{transition}{$model_states[$i]}	= 1 - $INTRON_TRANS;
+		} elsif ($model_states[$i] =~ /_E$/) {
+			$states{$model_states[$i]}{transition}{'END'}				= 1;
+			$states{$model_states[$i]}{transition}{$model_states[$i]}	= 1;
+		}
+	} else {
+		$states{$model_states[$i]}{transition}{$model_states[$i+1]}	= $EXON_TRANS;
+		$states{$model_states[$i]}{transition}{'Stop0'}				= $EXON_TRANS;
+		$states{$model_states[$i]}{transition}{$model_states[$i]}	= 1 - (2 * $EXON_TRANS);
+	}
+}
+
 # Sanity Check
-#use DataBrowser; browse(\%states);
-
-# Output Emission Counts
-print "GENOMIC_S\n";	emission_table(\%downst_em);
-print "\nSTART\n";		emission_table(\%start_em);
-print "\nCODING\n";		emission_table(\%exon_em);
-print "\nDONOR\n";		emission_table(\%donor_em);
-print "\nINTRON\n";		emission_table(\%intron_em);
-print "\nACCEPTOR\n";	emission_table(\%acceptor_em);
-print "\nSTOP\n";		emission_table(\%stop_em);
-print "\nGENOMIC_E\n";	emission_table(\%upst_em);
-
+use DataBrowser; browse(\%states);
 
 
 
 #-------------------#
 #	Generate HMM	#
 #-------------------#
-my %model = (
-	'Genomic_S'		=>	1,
-	'Start0'		=>	2,
-	'Start1'		=>	3,
-	'Start2'		=>	4,
-	'Coding'		=>	5,
-	'Don0'			=>	6,
-	'Don1'			=>	7,
-	'Intron'		=>	8,
-	'Accep0'		=>	9,
-	'Accep1'		=>	10,
-	'Stop0'			=>	11,
-	'Stop1'			=>	12,
-	'Stop2'			=>	13,
-	'Genomic_E'		=>	14,
-);
+my $DATE = `date`; chomp($DATE);
 
-
-open(OUT, ">test_gene_pred.hmm") or die "Could not write into OUT\n";
-print OUT "\
-#STOCHHMM MODEL FILE
+open(OUT, ">gene_pred14.hmm") or die "Could not write into OUT\n";
+print OUT "#STOCHHMM MODEL FILE
 
 <MODEL INFORMATION>
 ======================================================
@@ -155,15 +184,23 @@ TRANSITION:	STANDARD:	P(X)
 	Genomic_S:	1
 ";
 
-foreach my $st (sort {$model{$a} <=> $model{$b}} keys(%model)) {
+foreach my $s1 (@model_states) {
 	print OUT "##################################################\n";
 	print OUT "STATE:\n";
-	print OUT "\tNAME:\t$st\n";
-	print OUT "\tGFF_DESC:\t$st\n";
-	print OUT "\tPATH_LABEL: $states{$st}{path_label}\n";
+	print OUT "\tNAME:\t$s1\n";
+	print OUT "\tGFF_DESC:\t$s1\n";
+	print OUT "\tPATH_LABEL: $states{$s1}{path_label}\n";
 	print OUT "TRANSITION:	STANDARD:	P(X)\n";
+	foreach my $s2 (sort keys %{$states{$s1}{transition}}) {
+		print OUT "\t$s2:\t$states{$s1}{transition}{$s2}";
+		if ($s1 eq 'Don1')						{print OUT "\t$TRACEBACK";}
+		if ($s1 eq 'Genomic_E' and $s1 eq $s2)	{print OUT "\t$TRACEBACK";}
+		print OUT "\n";
+	}
+	
 	print OUT "EMISSION:	SEQ:	COUNTS\n";
-	print OUT "\tORDER:	$states{$st}{order}	AMBIGUOUS:	AVG\n";
+	print OUT "\tORDER:	$states{$s1}{order}	AMBIGUOUS:	AVG\n";
+	print OUT "$states{$s1}{emission}\n";
 }
 
 
@@ -179,6 +216,7 @@ close OUT;
 # SUBROUTINES														#
 #===================================================================#
 
+# Stores Order and Path Label info for each State
 sub get_state_info{
 	my ($name, $length, $order, $states) = @_;
 	my $label;
@@ -202,43 +240,53 @@ sub get_state_info{
 	return;
 }
 
-
+# Generates hash of Emission counts for each nucleotide
 sub get_emission_counts{
-	my ($seq, $length, $order, $states) = @_;
+	my ($seq, $length, $order, $counts) = @_;
 	
 	if ($order == 0) {
 		for (my $i = 0; $i < $length; $i++) {
-			$states->{$i}->{uc substr($seq, $i, 1)}++;
+			$counts->{$i}->{uc substr($seq, $i, 1)}++;
 		}
 	} else {
 		for (my $i = $order; $i < $length; $i++) {
 			my $ctx = uc substr($seq, $i - $order, $order);
 			my $nt = uc substr($seq, $i, 1);
 			next unless $nt =~ /[ACGT]/;
-			$states->{$ctx}->{$nt}++;
+			$counts->{$ctx}->{$nt}++;
 		}
 	}
 	return;
 }
 
-
+# Uses emission counts to generate final State Emission for HMM
 sub emission_table{
-	my ($states) = @_;
+	my ($em_counts, $name, $order, $states) = @_;
 	my @alphabet = qw(A C G T);
+	my $final_emission = "";
 	
-	foreach my $i (sort keys %$states) {
-		if ($i =~ /\d/) {print $i, "\t";}
+	foreach my $i (sort keys %$em_counts) {
 		my $emission = "";
 		foreach my $letter (@alphabet) {
 			my $count;
-			if (defined $states->{$i}->{$letter}) {
-				$count = $states->{$i}->{$letter};
+			if (defined $em_counts->{$i}->{$letter}) {
+				$count = $em_counts->{$i}->{$letter};
 			} else {
 				$count = 0;
 			}
 			$emission .= "$count\t";
 		}
-		print $emission, "\n";
+		chop($emission);
+		if ($i =~ /\d/ and $order == 0) {
+			my $st_name = $name . "$i";
+			$states->{$st_name}->{emission} = $emission;
+		} else {
+			$final_emission .= "$emission\n";
+		}
+	}
+	chop($final_emission);
+	if ($order != 0) {
+		$states->{$name}->{emission} = $final_emission;
 	}
 	return;
 }
