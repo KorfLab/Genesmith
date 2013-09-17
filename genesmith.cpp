@@ -4,7 +4,6 @@
  Copyright (C) 2013 Ravi Dandekar & Ian Korf. All rights reserved.
 \*****************************************************************************/
 
-
 #include <StochHMMlib.h>
 #include <unistd.h>
 #include <hmmer.h>
@@ -13,9 +12,9 @@ static void usage () {
 	std::cout
 		<< "usage: genesmith [options] <hmm file> <seq file>\n"
 		<< "options:\n"
-		<< "  -g <file> genetic code (assumes -p and or -f)\n"
 		<< "  -p <file> profile HMM (requires -g)\n"
 		<< "  -f <file> protein fasta file (requires -g)\n"
+		<< "  -g <file> alternate genetic code\n"
 		<< std::endl;
 	exit(1);
 }
