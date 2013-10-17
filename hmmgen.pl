@@ -16,14 +16,14 @@ die "$HELP" if $opt_h;
 
 # DEFAULT setting
 # <#states>:<Order>
-my $UP		= "1:1";
-my $START	= "3:0"; 
-my $EXON	= "3:2";
-my $DON		= "2:1";
-my $INTRON	= "3:2";
-my $ACCEP	= "2:1";
-my $STOP	= "3:2";
-my $DOWN	= "1:1";
+my $UP      = "1:1";
+my $START   = "3:0"; 
+my $EXON    = "3:2";
+my $DON     = "2:1";
+my $INTRON  = "3:2";
+my $ACCEP   = "2:1";
+my $STOP    = "3:2";
+my $DOWN    = "1:1";
 
 die "
 usage: $0 [options] <GFF> <FASTA>
@@ -55,13 +55,13 @@ my ($GFF, $FASTA) = @ARGV;
 #---------------------#
 # Important Variables #
 #---------------------#
-my ($i_size)  = $INTRON =~ /^(\d+):/;		      # Total Intron States
+my ($i_size)  = $INTRON =~ /^(\d+):/;             # Total Intron States
 my ($d_size)  = $DON    =~ /^(\d+):/;             # Total Donor States
 my ($a_size)  = $ACCEP  =~ /^(\d+):/;             # Total Acceptor States
 my ($e_size)  = $EXON   =~ /^(\d+):/;             # Total Exon States
 
 my ($e_order) = $EXON   =~ /:(\d+)$/;
-my $pad_quant;
+my $pad_quant;                                    # Total Padded CDS States
 $pad_quant = $e_order - 2 if $e_order > 2;
 $pad_quant = 0            if $e_order <= 2;
 
@@ -175,6 +175,7 @@ foreach my $contig ($genome->contigs) {
 	}
 }
 
+
 #-------------------------------------#
 # Validate                            #
 # - Remove KOGs with Alt Splice Sites #
@@ -197,8 +198,8 @@ my %trans_freq;
 
 # Label Sequence
 foreach my $id (keys %gene_struc) {
-	my $seq    = "";		                     # Full gene seq
-	my $labseq = "";		                     # Labeled gene seq
+	my $seq    = "";                             # Full gene seq
+	my $labseq = "";                             # Labeled gene seq
 	my $ex_max = $gene_struc{$id}{tot_exons};    # Total exons
 	my $in_max = $gene_struc{$id}{tot_introns};  # Total introns
 	foreach my $struc (@type) {
@@ -367,7 +368,6 @@ for (my $i=0; $i < scalar(@states); $i++) {
 		}
 	}
 }
-
 #Sanity Check for High Order CDS Transition Matrix
 # foreach my $obj (@states) {
 # 	my $st    = $obj->name;
@@ -382,8 +382,6 @@ for (my $i=0; $i < scalar(@states); $i++) {
 #--------------------------------#
 # Generate State Emission Counts #
 #--------------------------------#
-my %em_counts;
-
 foreach my $id (keys %gene_struc) {
 	my $ex_max     = $gene_struc{$id}{tot_exons};      # Total exons
 	my $in_max     = $gene_struc{$id}{tot_introns};    # Total introns
