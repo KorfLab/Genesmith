@@ -537,10 +537,11 @@ foreach my $id (keys %gene_struc) {
 #-------------------#
 # Create Model File #
 #-------------------#
-my $DATE     = `date`; chomp($DATE);
-my $ST_COUNT = scalar(@states);
-my ($FH)     = $FASTA =~ /(\w+.\w+).fa/;
-$FH         .= "_$ST_COUNT" . ".hmm";
+my $DATE      = `date`; chomp($DATE);
+my $ST_COUNT  = scalar(@states);
+my $TRACEBACK = "[FUNCTION:	HMMER	TRACK:	SEQ	COMBINE_LABEL:	C	TO_LABEL:	U]";
+my ($FH)      = $FASTA =~ /(\w+.\w+).fa/;
+$FH          .= "_$ST_COUNT" . ".hmm";
 
 open(OUT, ">$FH") or die "Could not write into OUT\n";
 print OUT "#STOCHHMM MODEL FILE
@@ -585,7 +586,8 @@ foreach my $obj (@states) {
 	foreach my $t (keys %$trans) {
 		my $t_prob = $trans->{$t};
 		print OUT "\t$t:\t$t_prob";
-		# Need to Add Traceback
+		if ($st =~ /^D/  and $t =~ /^i/) {print OUT "\t$TRACEBACK";}
+		if ($st =~ /^GD/ and $st eq $t)  {print OUT "\t$TRACEBACK";}
 		print OUT "\n";
 	}
 	# Get Final Emission
