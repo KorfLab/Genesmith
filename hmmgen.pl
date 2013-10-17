@@ -540,7 +540,7 @@ foreach my $id (keys %gene_struc) {
 my $DATE     = `date`; chomp($DATE);
 my $ST_COUNT = scalar(@states);
 my ($FH)     = $FASTA =~ /(\w+.\w+).fa/;
-$FH         .= ".hmm";
+$FH         .= "_$ST_COUNT" . ".hmm";
 
 open(OUT, ">$FH") or die "Could not write into OUT\n";
 print OUT "#STOCHHMM MODEL FILE
