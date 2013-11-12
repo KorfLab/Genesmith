@@ -2,15 +2,22 @@
 use strict;
 use warnings 'FATAL' => 'all';
 use DataBrowser;
+use PredictionEval;
 
 
 die "usage: $0 <exp_gff> <predicted_gff>\n" unless @ARGV == 2;
 my ($EXP, $OBS) = @ARGV;
 
-my $exp  = gff_coords($EXP);                   # Expected GFF CDS Coordinates
-my $obs  = gff_coords($OBS);                   # Predicted GFF CDS Coordinates
+my $bp_eval   = new PredictionEval();          # Nucleotide Counts (TP, TN, FP, FN)
+my $cds_eval  = new PredictionEval();          # CDS Counts
+my $gene_eval = new PredictionEval();          # Core Gene Counts
+my $exp       = gff_coords($EXP);              # Expected GFF CDS Coordinates
+my $obs       = gff_coords($OBS);              # Predicted GFF CDS Coordinates
 my %evid;                                      # Contains Evidence Counts for each gene
 
+#--------------------------------------#
+# Get Nucleotide, Exon and Gene Counts #
+#--------------------------------------#
 foreach my $id (keys %$exp) {
 	my $cds_exp = scalar(@{$exp->{$id}});      # Expected quantity of CDS per gene 
 	my $cds_obs;                               # Predicted quantity of CDS per gene
@@ -51,20 +58,37 @@ foreach my $id (keys %$exp) {
 			substr($lb_obs, $obs_start, $obs_len) = "1" x $obs_len if $lb_obs !~ /NA/ and $obs_start !~ /NA/;
 		} 
 		
-		# Analyze
+		# Nucleotide Level Analysis
 		my $counts = evid_counts($id, $lb_exp, $lb_obs, $exp, $obs);
-		#browse($counts);
-		
-		# Sensitivity
-		my $tp  = $counts->{bp}{TP};
-		my $fn  = $counts->{bp}{FN};
+		my $tp     = $counts->{bp}{TP};
+		my $tn     = $counts->{bp}{TN};
+		my $fp     = $counts->{bp}{FP};
+		my $fn     = $counts->{bp}{FN};
 		if (!defined $tp)  {$tp = 0;}
+		if (!defined $tn)  {$tn = 0;}
+		if (!defined $fp)  {$fp = 0;}
 		if (!defined $fn)  {$fn = 0;}
-		my $tpr = $tp/($tp + $fn);
+		$bp_eval->true_pos($tp);
+		$bp_eval->true_neg($tn);
+		$bp_eval->false_pos($fp);
+		$bp_eval->false_neg($fn);
+		
+		# CDS Level Analysis
+		my $match = $counts->{exon}{MATCH};
+		my $mis   = $counts->{exon}{MISMATCH};
+		my $none  = $counts->{exon}{MISSING};
+		if (!defined $match)  {$match = 0;}
+		if (!defined $mis)    {$mis   = 0;}
+		if (!defined $none)   {$none  = 0;}
+		$cds_eval->match($match);
+		$cds_eval->mismatch($mis);
+		$cds_eval->missing($none);
 
 		# Gene Level Analysis
 		my $gene_status = gene_eval($counts->{exon}, $cds_exp);
-		print $id, "\t", $gene_status, "\tTPR: $tpr\n";	
+		$gene_eval->match(1)    if $gene_status eq 'MATCH';
+		$gene_eval->mismatch(1) if $gene_status eq 'MISMATCH';
+		$gene_eval->missing(1)  if $gene_status eq 'MISSING';
 	} else {
 		my $lb_exp = "0" x $exp->{$id}->[-1]->[-1]; # Labeled Expected Sequence
 		my $lb_obs = "NA";                          # Labeled Predicted Sequence
@@ -92,23 +116,55 @@ foreach my $id (keys %$exp) {
 			substr($lb_obs, $obs_start, $obs_len) = "1" x $obs_len if $lb_obs !~ /NA/ and $obs_start !~ /NA/;
 		}
 		
-		# Analyze
 		my $counts = evid_counts($id, $lb_exp, $lb_obs, $exp, $obs);
-		#browse($counts);
 		
-		# Sensitivity
-		my $tp  = $counts->{bp}{TP};
-		my $fn  = $counts->{bp}{FN};
+		# Nucleotide Level Analysis
+		my $tp     = $counts->{bp}{TP};
+		my $tn     = $counts->{bp}{TN};
+		my $fp     = $counts->{bp}{FP};
+		my $fn     = $counts->{bp}{FN};
 		if (!defined $tp)  {$tp = 0;}
+		if (!defined $tn)  {$tn = 0;}
+		if (!defined $fp)  {$fp = 0;}
 		if (!defined $fn)  {$fn = 0;}
-		my $tpr = $tp/($tp + $fn);
+		$bp_eval->true_pos($tp);
+		$bp_eval->true_neg($tn);
+		$bp_eval->false_pos($fp);
+		$bp_eval->false_neg($fn);
 		
+		# CDS Level Analysis
+		my $match = $counts->{exon}{MATCH};
+		my $mis   = $counts->{exon}{MISMATCH};
+		my $none  = $counts->{exon}{MISSING};
+		if (!defined $match)  {$match = 0;}
+		if (!defined $mis)    {$mis   = 0;}
+		if (!defined $none)   {$none  = 0;}
+		$cds_eval->match($match);
+		$cds_eval->mismatch($mis);
+		$cds_eval->missing($none);
+				
 		# Gene Level Analysis
 		my $gene_status = gene_eval($counts->{exon}, $cds_exp);
-		print $id, "\t", $gene_status, "\tTPR: $tpr\n";
+		$gene_eval->match(1)    if $gene_status eq 'MATCH';
+		$gene_eval->mismatch(1) if $gene_status eq 'MISMATCH';
+		$gene_eval->missing(1)  if $gene_status eq 'MISSING';
 	}
 }
-#browse($exp);
+
+
+#---------------------------------#
+# Calculate Evaluation Parameters #
+#---------------------------------#
+#browse($cds_eval);
+my $tp = $bp_eval->{true_pos};    # Total True Pos.
+my $tn = $bp_eval->{true_neg};    # Total True Neg.
+my $fp = $bp_eval->{false_pos};   # Total False Pos.
+my $fn = $bp_eval->{false_neg};   # Total False Neg.
+
+my $tpr = PredictionEval::calc_tpr($tp, $fn);           # Sensitivity
+my $spc = PredictionEval::calc_spc($tn, $fp);           # Specificity
+my $mcc = PredictionEval::calc_mcc($tp, $tn, $fp, $fn); # Matthews Correlation Coefficient
+printf "MCC: %.3f\nTPR: %.3f\nSPC: %.3f\n", $mcc, $tpr, $spc;
 
 
 #===================================================================#
