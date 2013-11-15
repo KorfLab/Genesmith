@@ -6,9 +6,6 @@ use DataBrowser;
 use PredictionEval;
 
 
-# NEED TO ADD LENGTH OF FASTA SEQ
-# 3rd argument could either be the length or the FASTA file itself
-
 die "usage: $0 <exp_fasta> <exp_gff> <predicted_gff>\n" unless @ARGV == 3;
 my ($FASTA, $EXP, $OBS) = @ARGV;
 
@@ -99,8 +96,9 @@ my $fn = $bp_sum->{false_neg};   # Total False Neg.
 
 my $tpr = PredictionEval::calc_tpr($tp, $fn);           # Sensitivity
 my $spc = PredictionEval::calc_spc($tn, $fp);           # Specificity
+my $acc = PredictionEval::calc_acc($tp, $tn, $fp, $fn); # Accuracy
 my $mcc = PredictionEval::calc_mcc($tp, $tn, $fp, $fn); # Matthews Correlation Coefficient
-printf "MCC: %.3f\nTPR: %.3f\nSPC: %.3f\n", $mcc, $tpr, $spc;
+printf "MCC: %.3f\nACC: %.3f\nTPR: %.3f\nSPC: %.3f\n", $mcc, $acc, $tpr, $spc;
 
 
 #===================================================================#
