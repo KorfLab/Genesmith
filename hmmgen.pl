@@ -16,14 +16,14 @@ die "$HELP" if $opt_h;
 
 # DEFAULT setting
 # <#states>:<Order>
-my $UP      = "1:1";
+my $UP      = "1:0";
 my $START   = "3:0"; 
 my $EXON    = "3:2";
-my $DON     = "2:1";
+my $DON     = "2:0";
 my $INTRON  = "3:2";
-my $ACCEP   = "2:1";
+my $ACCEP   = "2:0";
 my $STOP    = "3:2";
-my $DOWN    = "1:1";
+my $DOWN    = "1:0";
 
 die "
 usage: $0 [options] <GFF> <FASTA>
@@ -180,6 +180,7 @@ foreach my $contig ($genome->contigs) {
 # Validate                            #
 # - Remove KOGs with Alt Splice Sites #
 #   form the Training Set             #
+# - Create Test and Training sets     #
 #-------------------------------------#
 my $alt_splice = validate(\%gene_struc, \@type);
 foreach my $id (keys %$alt_splice) {delete $gene_struc{$id};}
@@ -508,7 +509,18 @@ foreach my $id (keys %gene_struc) {
 			# Stop Codon
 			if ($st =~ /stop/) {
 				my $seq = "";
-				$seq   .= substr($last_ex, -($order + 3), $order) if $order != 0;
+				if ($order != 0) {
+					if (length($last_ex) < ($order + 3)) {
+						my $prev_ex  = $gene_struc{$id}{Exons}{$ex_max - 1};
+						my $prev_pos = ($order + 3) - length($last_ex);
+						my $last_pos = $order - $prev_pos;
+						$seq        .= substr($prev_ex, -$prev_pos, $prev_pos);
+						$seq        .= substr($last_ex, -($last_pos + 3), $last_pos); 
+					}
+					if (length($last_ex) > ($order + 3)) {
+						$seq   .= substr($last_ex, -($order + 3), $order);
+					}
+				}
 				$seq   .= substr($last_ex, -3, 3);
 				$states[$s]->emission($st, $order, $tot_trans, $seq);
 			}
@@ -841,6 +853,22 @@ sub get_em_rows{
 			}
 		}	
 	}
+	
+	if ($order == 6) {
+		foreach my $c1 (@alph) {
+			foreach my $c2 (@alph) {
+				foreach my $c3 (@alph) {
+					foreach my $c4 (@alph) {
+						foreach my $c5 (@alph) {
+							foreach my $c6 (@alph) {
+								$em_rows{"$c1$c2$c3$c4$c5$c6"} = 1;
+							}
+						}
+					}
+				}
+			}
+		}	
+	}
 	return %em_rows;
 }
 
@@ -859,14 +887,14 @@ __DATA__
 
 -  DEFAULT
    -- Init Model Components
-      - Upstream Seq   [-F]
+      - Upstream Seq   [-f]
       - Start Codon    [-s]
-      - cds(Exon)      [-c]
+      - cds(Exon)      [-C]
       - Donor Site     [-D]
       - Intron body    [-i]
       - Acceptor Site  [-A]
       - Stop Site      [-e]
-      - Downstream Seq [-T] 
+      - Downstream Seq [-t] 
 
 	
    -- Values for each Component
