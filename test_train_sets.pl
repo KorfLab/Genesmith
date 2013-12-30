@@ -155,6 +155,7 @@ sub test_train_seqs{
 	
 	# FASTA files
 	for(my $i=0; $i < $sets; $i++) {
+		print "SET: $i\t";
 		# Determine Start Position
 		my $pos = $test_quant * $i;
 		
@@ -170,7 +171,7 @@ sub test_train_seqs{
 
 		
 		for(my $f=0; $f < scalar(@$val_kogs); $f++) {
-			my $id  = $val_kogs->[$pos];
+			my $id  = $val_kogs->[$f];
 			my $seq = $seqs->{$id};
 			my $ann = `grep "$id" $GFF`;
 			
@@ -185,6 +186,7 @@ sub test_train_seqs{
 		close TEST;
 		close TRAIN;
 		close TESTGFF;
-		close TRAINGFF;		
+		close TRAINGFF;
+		print "COMPLETE\n\n";	
 	}
 }
