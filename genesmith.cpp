@@ -5,28 +5,8 @@
 \*****************************************************************************/
 
 #include <StochHMMlib.h>
-#include <unistd.h>
 #include <hmmer.h>
-#include <iostream>
-#include <fstream>
-#include <sstream>
 
-#include <cstring>
-#include <stdio.h>
-#include <stdlib.h>
-
-#include <algorithm>
-#include <iterator>
-#include <string>
-#include <vector>
-
-enum BP {
-	A = 0,
-	C = 1,
-	G = 2,
-	T = 3,
-	N = 4,
-};
 
 /* GLOBAL variables */
 static std::vector<std::string> PROTEINS;
@@ -125,54 +105,24 @@ int main (int argc, char ** argv) {
 // 		std::cout << PROTEINS[i] << "\t" << CODONS[i] << std::endl;
 // 	}
 	
-	/* open output file */
-// 	std::ofstream out;
-// 	out.open("test_ann.gff");
-// 	if(out.fail()) {
-// 		std::cout << "Error writing into <test_ann.gff>\n" << std::endl;
-// 		exit(1);
-// 	}
 	
 	/* decode & output */
 	StochHMM::StateFuncs my_trans;
 	StochHMM::model hmm;
 	StochHMM::seqTracks jobs;
-// 	std::vector<StochHMM::gff_feature> feat;
 	my_trans.assignTransitionFunction("HMMER", *tb_eval);
 	hmm.import(hmm_file, &my_trans);
 	jobs.loadSeqs(hmm, seq_file);
 	StochHMM::seqJob *job=jobs.getJob();
 	
 	while (job != NULL) {
-// 		std::stringstream results;
 		StochHMM::trellis trell(&hmm, job->getSeqs());
 		trell.viterbi();
 		StochHMM::traceback_path tb(&hmm);
 		trell.traceback(tb);
 		tb.print_gff(job->getHeader());
-		
-		/* print to output file */
-// 		tb.gff(feat, job->getSeqs()->getHeader());
-// 		for (size_t i=0; i < feat.size(); i++) {
-// 			std::string id    = feat[i].seqname;
-// 			std::string struc = feat[i].feature;
-// 			if (id.substr(0,1) == ">") {id.erase(0,1);}
-// 				if (struc.substr(0,3) != "cds") {
-// 					results << id              << "\t" 
-// 							<< feat[i].source  << "\t" 
-// 							<< feat[i].feature << "\t"
-// 							<< feat[i].start   << "\t"
-// 							<< feat[i].end     << "\t"
-// 							<< feat[i].score   << "\t"
-// 							<< feat[i].strand  << "\t"
-// 							<< id              << "\n";
-// 				}
-// 		}
-// 		out << results.str();
 		job = jobs.getJob();
 	}
-	
-// 	out.close();
 	return 0;
 }
 
