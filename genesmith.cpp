@@ -10,16 +10,34 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+
+#include <cstring>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include <algorithm>
 #include <iterator>
 #include <string>
 #include <vector>
 
+enum BP {
+	A = 0,
+	C = 1,
+	G = 2,
+	T = 3,
+	N = 4,
+};
+
 /* GLOBAL variables */
-static std::string PROTEINS("");
+static std::vector<std::string> PROTEINS;
 static std::vector<std::string> CODONS;
 
+
+std::string translate (const std::string *mrna, std::vector<std::string> &PROTEINS, std::vector<std::string> &CODONS);
+
 double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, size_t tb) {
+	//std::string aa_seq = translate(mrna, PROTEINS, CODONS);
+	//std::cout << "\n>MRNA\n" << *mrna << "\n>PROTEIN\n" << aa_seq << std::endl;
 	return 0.01;
 }
 
@@ -34,6 +52,9 @@ static void usage () {
 	exit(1);
 }
 
+/*========*/
+/*  MAIN  */
+/*========*/
 int main (int argc, char ** argv) {
 	char * fasta_file   = NULL;
 	char * profile_file = NULL;
@@ -77,46 +98,100 @@ int main (int argc, char ** argv) {
 	}
 	
 	std::string line;
-	std::string proteins("");
+	static const char bps[] = "ACGTN";
+	std::vector<std::string> proteins;
 	std::vector<std::string> codons;
 	
 	while (!file.eof()) {
 		getline(file, line);
 		std::stringstream ss(line);
 		std::string elem;
+		std::string aa;
 		while(std::getline(ss, elem, '\t')) {
 			int slen = elem.length();
-			if (slen == 1) {proteins += elem;}
-			else           {codons.push_back(elem);}
+			if (slen == 1) {
+				proteins.push_back(elem);
+				aa = elem;
+			} else {
+				codons.push_back(elem);
+				//std::cout << aa << "\t" << elem << std::endl;
+			}
 		}
 	}
 	PROTEINS = proteins;
 	CODONS   = codons;
 	
-// 	std::cout << PROTEINS << std::endl;
-// 	for(size_t i=0; i < CODONS.size(); i++) {
-// 		std::cout << CODONS[i] << std::endl;
+// 	for(size_t i=0; i < PROTEINS.size(); i++) {
+// 		std::cout << PROTEINS[i] << "\t" << CODONS[i] << std::endl;
 // 	}
 	
+	/* open output file */
+// 	std::ofstream out;
+// 	out.open("test_ann.gff");
+// 	if(out.fail()) {
+// 		std::cout << "Error writing into <test_ann.gff>\n" << std::endl;
+// 		exit(1);
+// 	}
 	
 	/* decode & output */
 	StochHMM::StateFuncs my_trans;
 	StochHMM::model hmm;
 	StochHMM::seqTracks jobs;
+// 	std::vector<StochHMM::gff_feature> feat;
 	my_trans.assignTransitionFunction("HMMER", *tb_eval);
 	hmm.import(hmm_file, &my_trans);
 	jobs.loadSeqs(hmm, seq_file);
 	StochHMM::seqJob *job=jobs.getJob();
 	
 	while (job != NULL) {
+// 		std::stringstream results;
 		StochHMM::trellis trell(&hmm, job->getSeqs());
 		trell.viterbi();
 		StochHMM::traceback_path tb(&hmm);
 		trell.traceback(tb);
 		tb.print_gff(job->getHeader());
+		
+		/* print to output file */
+// 		tb.gff(feat, job->getSeqs()->getHeader());
+// 		for (size_t i=0; i < feat.size(); i++) {
+// 			std::string id    = feat[i].seqname;
+// 			std::string struc = feat[i].feature;
+// 			if (id.substr(0,1) == ">") {id.erase(0,1);}
+// 				if (struc.substr(0,3) != "cds") {
+// 					results << id              << "\t" 
+// 							<< feat[i].source  << "\t" 
+// 							<< feat[i].feature << "\t"
+// 							<< feat[i].start   << "\t"
+// 							<< feat[i].end     << "\t"
+// 							<< feat[i].score   << "\t"
+// 							<< feat[i].strand  << "\t"
+// 							<< id              << "\n";
+// 				}
+// 		}
+// 		out << results.str();
 		job = jobs.getJob();
 	}
 	
+// 	out.close();
 	return 0;
 }
 
+
+/*=============*/
+/* SUBROUTINES */
+/*=============*/
+
+/* Generates protein sequence using inputted DNA sequence and translation table */
+std::string translate (const std::string *mrna, std::vector<std::string> &PROTEINS, std::vector<std::string> &CODONS){
+	std::string aa_seq("");
+	for (int i=0; i < mrna->length(); i += 3) {
+		std::string codon = mrna->substr(i,3);
+		for (size_t s=0; s < CODONS.size(); s++) {
+			if (codon.compare(CODONS[s]) == 0) {
+				std::string aa = PROTEINS[s];
+				aa_seq += aa;
+			}
+		}
+	}
+	return aa_seq;
+}

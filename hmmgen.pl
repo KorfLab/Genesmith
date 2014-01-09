@@ -552,7 +552,7 @@ foreach my $id (keys %gene_struc) {
 my $DATE      = `date`; chomp($DATE);
 my $ST_COUNT  = scalar(@states);
 my $TRACEBACK = "[FUNCTION:	HMMER	TRACK:	SEQ	COMBINE_LABEL:	C	TO_LABEL:	U]";
-my ($FH)      = $FASTA =~ /(\w+.\w+).fa/;
+my ($FH)      = $FASTA =~ /(\w+).fa/;
 $FH          .= "_$ST_COUNT" . ".hmm";
 
 open(OUT, ">$FH") or die "Could not write into OUT\n";

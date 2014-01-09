@@ -162,7 +162,7 @@ sub test_train_seqs{
 		# Determine number of iterations
 		if ($i == $sets - 1) {$quant = scalar(@$val_kogs) - $pos;}
 		else                 {$quant = $test_quant;}
-		#print $pos, "\t", $quant, "\n";
+		print $pos, "\t", $quant, "\n";
 		
 		open(TEST,     ">$taxa\_test$i\.fa" )  or die "Error writing into TEST\n";
 		open(TRAIN,    ">$taxa\_train$i\.fa")  or die "Error writing into TRAIN\n";
