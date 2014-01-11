@@ -11,7 +11,19 @@
 /* GLOBAL variables */
 static std::vector<std::string> PROTEINS;
 static std::vector<std::string> CODONS;
+char codons[5][5][5] = {{{'A','C','G','T', 'N'},{'A','C','G','T', 'N'},{'A','C','G','T', 'N'},{'A','C','G','T', 'N'}, {'A','C','G','T', 'N'}},
+						{{'A','C','G','T', 'N'},{'A','C','G','T', 'N'},{'A','C','G','T', 'N'},{'A','C','G','T', 'N'}, {'A','C','G','T', 'N'}},
+						{{'A','C','G','T', 'N'},{'A','C','G','T', 'N'},{'A','C','G','T', 'N'},{'A','C','G','T', 'N'}, {'A','C','G','T', 'N'}},
+						{{'A','C','G','T', 'N'},{'A','C','G','T', 'N'},{'A','C','G','T', 'N'},{'A','C','G','T', 'N'}, {'A','C','G','T', 'N'}},
+						{{'A','C','G','T', 'N'},{'A','C','G','T', 'N'},{'A','C','G','T', 'N'},{'A','C','G','T', 'N'}, {'A','C','G','T', 'N'}}};
 
+enum BP {
+	A = 0,
+	C = 1,
+	G = 2,
+	T = 3,
+	N = 4,
+};
 
 std::string translate (const std::string *mrna, std::vector<std::string> &PROTEINS, std::vector<std::string> &CODONS);
 

@@ -5,7 +5,7 @@ use DataBrowser;
 
 die "usage: format_gff.pl <GFF>\n" unless @ARGV == 1;
 my ($GFF) = @ARGV;
-my ($FH)  = $GFF =~ /(\w+\d+_\w+)_\w+.gff/;
+my ($SET, $TAXA)  = $GFF =~ /(\w+\d+)_(\w+)_\w+.gff/;
 
 my $prev_feat = "none";
 my $start_id;
@@ -13,8 +13,8 @@ my $end_id;
 my $cds_start;
 my $cds_end;
 
-open (IN, "<$GFF")           or die "Error reading <$GFF>\n";
-open (OUT, ">$FH\_pred.gff") or die "Error writing into OUT\n";
+open (IN, "<$GFF")                   or die "Error reading <$GFF>\n";
+open (OUT, ">$TAXA\_$SET\_pred.gff") or die "Error writing into OUT\n";
 while (<IN>) {
 	next unless /\S/;
 	my ($id, $source, $feat, $start, $end, $score, $strand, $attrib) = split;
