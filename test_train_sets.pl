@@ -55,7 +55,6 @@ foreach my $contig ($genome->contigs) {
 }
 
 
-
 #-------------------------------------#
 # Validate                            #
 # - Remove KOGs with Alt Splice Sites #
@@ -70,13 +69,13 @@ foreach my $id (keys %$alt_splice) {delete $gene_struc{$id};}
 
 # Of the Validated KOGs create test and training sets (4 combos)
 my %seqs;   #hash of all FASTA sequences
-my $taxa;
+my $first_id = `head -n 1 $FASTA`;
+my ($taxa)   = $first_id =~ /^>(\w\w)\w+/;
 
 open (IN, "<$FASTA") or die "Error reading FASTA file\n";
 my $fasta = new FAlite(\*IN);
 while(my $entry = $fasta->nextEntry) {
 	my ($id)    = $entry->def =~ /^>(\S+)$/;
-	($taxa)     = $id =~ /^(\w\w)\w+/;
 	$seqs{$id}  = uc($entry->seq);
 }
 close IN;

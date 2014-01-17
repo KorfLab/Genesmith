@@ -6,30 +6,25 @@
 
 #include <StochHMMlib.h>
 #include <hmmer.h>
+#include <iostream>
+#include <map>
 
 
 /* GLOBAL variables */
-static std::vector<std::string> PROTEINS;
-static std::vector<std::string> CODONS;
-char codons[5][5][5] = {{{'A','C','G','T', 'N'},{'A','C','G','T', 'N'},{'A','C','G','T', 'N'},{'A','C','G','T', 'N'}, {'A','C','G','T', 'N'}},
-						{{'A','C','G','T', 'N'},{'A','C','G','T', 'N'},{'A','C','G','T', 'N'},{'A','C','G','T', 'N'}, {'A','C','G','T', 'N'}},
-						{{'A','C','G','T', 'N'},{'A','C','G','T', 'N'},{'A','C','G','T', 'N'},{'A','C','G','T', 'N'}, {'A','C','G','T', 'N'}},
-						{{'A','C','G','T', 'N'},{'A','C','G','T', 'N'},{'A','C','G','T', 'N'},{'A','C','G','T', 'N'}, {'A','C','G','T', 'N'}},
-						{{'A','C','G','T', 'N'},{'A','C','G','T', 'N'},{'A','C','G','T', 'N'},{'A','C','G','T', 'N'}, {'A','C','G','T', 'N'}}};
+std::map<std::string, int> BP_KEY;        // Dictionary of Base Pair Positions within Translation Table
 
-enum BP {
-	A = 0,
-	C = 1,
-	G = 2,
-	T = 3,
-	N = 4,
-};
+// Standard Translation Table Hard Coded
+static char Codons[5][5][5] = {{{'K','N','K','N', 'X'},{'T','T','T','T', 'X'},{'R','S','R','S', 'X'},{'I','I','M','I', 'X'}, {'A','C','G','T', 'X'}},
+						       {{'Q','H','Q','H', 'X'},{'P','P','P','P', 'X'},{'R','R','R','R', 'X'},{'L','L','L','L', 'X'}, {'A','C','G','T', 'X'}},
+						       {{'E','D','E','D', 'X'},{'A','A','A','A', 'X'},{'G','G','G','G', 'X'},{'V','V','V','V', 'X'}, {'A','C','G','T', 'X'}},
+						       {{'*','Y','*','Y', 'X'},{'S','S','S','S', 'X'},{'*','C','W','C', 'X'},{'L','F','L','F', 'X'}, {'A','C','G','T', 'X'}},
+						       {{'A','C','G','T', 'X'},{'A','C','G','T', 'X'},{'A','C','G','T', 'X'},{'A','C','G','T', 'X'}, {'A','C','G','T', 'X'}}};
 
-std::string translate (const std::string *mrna, std::vector<std::string> &PROTEINS, std::vector<std::string> &CODONS);
-
+/* FUNCTIONS */
+std::string translate (const std::string *mrna); 
 double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, size_t tb) {
-	//std::string aa_seq = translate(mrna, PROTEINS, CODONS);
-	//std::cout << "\n>MRNA\n" << *mrna << "\n>PROTEIN\n" << aa_seq << std::endl;
+// 	std::string aa_seq = translate(mrna);
+// 	std::cout << "\n>MRNA\n" << *mrna << "\n>PROTEIN\n" << aa_seq << std::endl;
 	return 0.01;
 }
 
@@ -79,43 +74,11 @@ int main (int argc, char ** argv) {
 	dna.push_back("T");
 	StochHMM::track tr = dna;
 	
-	/* parse translation table */
-	std::string codon_tbl;
-	codon_tbl = genetic_code;
-	
-	std::ifstream file;
-	file.open(codon_tbl.c_str());
-	if (!file.is_open()) {
-		std::cerr << "Error reading Codon Table\n";
-	}
-	
-	std::string line;
-	static const char bps[] = "ACGTN";
-	std::vector<std::string> proteins;
-	std::vector<std::string> codons;
-	
-	while (!file.eof()) {
-		getline(file, line);
-		std::stringstream ss(line);
-		std::string elem;
-		std::string aa;
-		while(std::getline(ss, elem, '\t')) {
-			int slen = elem.length();
-			if (slen == 1) {
-				proteins.push_back(elem);
-				aa = elem;
-			} else {
-				codons.push_back(elem);
-				//std::cout << aa << "\t" << elem << std::endl;
-			}
-		}
-	}
-	PROTEINS = proteins;
-	CODONS   = codons;
-	
-// 	for(size_t i=0; i < PROTEINS.size(); i++) {
-// 		std::cout << PROTEINS[i] << "\t" << CODONS[i] << std::endl;
-// 	}
+	/* Insert Position Values for BP_KEY */
+	BP_KEY.insert(std::pair<std::string, int>("A", 0));
+	BP_KEY.insert(std::pair<std::string, int>("C", 1));
+	BP_KEY.insert(std::pair<std::string, int>("G", 2));
+	BP_KEY.insert(std::pair<std::string, int>("T", 3));
 	
 	
 	/* decode & output */
@@ -144,16 +107,23 @@ int main (int argc, char ** argv) {
 /*=============*/
 
 /* Generates protein sequence using inputted DNA sequence and translation table */
-std::string translate (const std::string *mrna, std::vector<std::string> &PROTEINS, std::vector<std::string> &CODONS){
+std::string translate (const std::string *mrna){
 	std::string aa_seq("");
 	for (int i=0; i < mrna->length(); i += 3) {
-		std::string codon = mrna->substr(i,3);
-		for (size_t s=0; s < CODONS.size(); s++) {
-			if (codon.compare(CODONS[s]) == 0) {
-				std::string aa = PROTEINS[s];
-				aa_seq += aa;
+		int pos_one;
+		int pos_two;
+		int pos_three;
+		std::string codon    = mrna->substr(i,3);
+		for (size_t s=0; s < codon.length(); s++) {
+			std::string bp = codon.substr(s,1);
+			std::map<std::string, int>::iterator bp_to_pos = BP_KEY.find(bp);
+			if (bp_to_pos != BP_KEY.end()) {
+				if      (s == 0) {pos_one   = (*bp_to_pos).second;}
+				else if (s == 1) {pos_two   = (*bp_to_pos).second;}
+				else if (s == 2) {pos_three = (*bp_to_pos).second;}
 			}
 		}
+		aa_seq.append(1, Codons[pos_one][pos_two][pos_three]);
 	}
 	return aa_seq;
 }

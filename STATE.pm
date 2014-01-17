@@ -71,7 +71,6 @@ sub emission{
 			my $pos;
 			($pos) = $st =~ /\w+(\d+)$/  if $st =~ /\w+\d+/;
 			($pos) = $st =~ /\d+_(\d+)$/ if $st =~ /\w+\d+_\d+/;
-			
 			my $ctx = uc substr($seq, $pos, $order);
 			my $nt = uc substr($seq, ($order + $pos), 1);
 			$self->{emission}->{$ctx}->{$nt}++;

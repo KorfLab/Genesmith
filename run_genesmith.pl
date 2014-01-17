@@ -26,6 +26,17 @@ $OPTS  = edit_opts($opt_o) if $opt_o;
 my ($GFF, $FASTA) = @ARGV;
 my $start_run = time();
 
+
+#----------------#
+# Pre-processing #
+#----------------#
+# Get Species two letter abbreviation
+my $gff_info = `head -n 1 $GFF`;
+my ($TAXA) = $gff_info =~ /^(\w\w)\w+/;
+print "\nGenesmith Performance Evaluation ($TAXA\)\n";
+print "-------------------------------------\n\n";
+
+# Format Translation Table
 print ">>> Formatting Tranlation Table\n\n";
 `format_trans_tbl.pl $TRANS`;
 
@@ -40,7 +51,7 @@ print ">>> Creating TEST and TRAINING sets\n";
 my %files;
 my @gff_fhs;
 my @fa_fhs;
-foreach my $fh (glob("./CE_*")) {
+foreach my $fh (glob("./$TAXA\_*")) {
 	if    ($fh =~ /.fa$/)  {push(@fa_fhs, $fh);}
 	elsif ($fh =~ /.gff$/) {push(@gff_fhs, $fh);}
 }
@@ -77,13 +88,13 @@ for (my $i=0; $i < $sets; $i++) {
 # Running Genesmith #
 #-------------------#
 print "\n>>> Running Genesmith\n";
-foreach my $fh (glob("*.hmm")) {
-	my ($taxa, $set) = $fh =~ /(\w+)_\w+(\d+)_\d+.hmm/;
+foreach my $fh (glob("$TAXA\_*.hmm")) {
+	my ($set) = $fh =~ /$TAXA\_\w+(\d+)_\d+.hmm/;
 	foreach my $gff (keys %files) {
 		if ($gff =~ /test/) {
 			my ($gffset) = $gff =~ /\w+(\d+).gff/;
 			if ($gffset eq $set) {
-				my $cmd = "genesmith $fh $files{$gff} > test$set\_$taxa\_genesmith.gff";
+				my $cmd = "genesmith $fh $files{$gff} > test$set\_$TAXA\_genesmith.gff";
 				`$cmd`;
 				print "\t$cmd\n";
 			}
@@ -104,14 +115,13 @@ foreach my $fh (glob("*genesmith.gff")) {
 #---------------------------#
 # Evaluate Gene Predictions #
 #---------------------------#
-
 print "\n>>> Prediction Evaluation\n";
 my $exp_gff;
 my $pred_gff;
 my $exp_fasta;
 my $exp_set;
 foreach my $fh (glob("*.gff")) {
-	if ($fh =~ /\w+_test\d+/) {
+	if ($fh =~ /$TAXA\_test\d+/) {
 		if ($fh =~ /\w+\d+.gff/) {
 			($exp_set) = $fh =~ /\w+(\d+).gff/;
 			$exp_gff   = "./$fh";
@@ -129,10 +139,19 @@ foreach my $fh (glob("*.gff")) {
 		}
 	}
 }
+
+#--------------------#
+# Remove Extra Files #
+#--------------------#
+print "\n>>> Removing Extra Files\n";
+foreach my $fh (glob("$TAXA\_*"))       {`rm $fh`;}
+foreach my $fh (glob("*genesmith.gff")) {`rm $fh`;}
+
 my $end_run = time();
 my $run_time = $end_run - $start_run;
-print "\n>>> COMPLETE!\tTime: $run_time seconds\n";
-
+my $minutes  = int($run_time / 60);
+my $seconds  = $run_time % 60;
+print "\n>>> COMPLETE!\tTime: $minutes min  $seconds sec\n";
 
 
 #=============#

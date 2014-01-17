@@ -517,7 +517,7 @@ foreach my $id (keys %gene_struc) {
 						$seq        .= substr($prev_ex, -$prev_pos, $prev_pos);
 						$seq        .= substr($last_ex, -($last_pos + 3), $last_pos); 
 					}
-					if (length($last_ex) > ($order + 3)) {
+					if (length($last_ex) >= ($order + 3)) {
 						$seq   .= substr($last_ex, -($order + 3), $order);
 					}
 				}
