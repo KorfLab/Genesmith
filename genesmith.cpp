@@ -6,22 +6,27 @@
 
 #include <StochHMMlib.h>
 #include <hmmer.h>
+#include <p7_config.h>
+#include <easel.h>
 #include <iostream>
 #include <map>
 
 
 /* GLOBAL variables */
 std::map<std::string, int> BP_KEY;        // Dictionary of Base Pair Positions within Translation Table
+static ESL_ALPHABET *ALPHABET = NULL;
+static P7_HMM       *PROFILE  = NULL;
 
 // Standard Translation Table Hard Coded
-static char Codons[5][5][5] = {{{'K','N','K','N', 'X'},{'T','T','T','T', 'X'},{'R','S','R','S', 'X'},{'I','I','M','I', 'X'}, {'A','C','G','T', 'X'}},
-						       {{'Q','H','Q','H', 'X'},{'P','P','P','P', 'X'},{'R','R','R','R', 'X'},{'L','L','L','L', 'X'}, {'A','C','G','T', 'X'}},
-						       {{'E','D','E','D', 'X'},{'A','A','A','A', 'X'},{'G','G','G','G', 'X'},{'V','V','V','V', 'X'}, {'A','C','G','T', 'X'}},
-						       {{'*','Y','*','Y', 'X'},{'S','S','S','S', 'X'},{'*','C','W','C', 'X'},{'L','F','L','F', 'X'}, {'A','C','G','T', 'X'}},
-						       {{'A','C','G','T', 'X'},{'A','C','G','T', 'X'},{'A','C','G','T', 'X'},{'A','C','G','T', 'X'}, {'A','C','G','T', 'X'}}};
+static char CODONS[5][5][5] = {{{'K','N','K','N', 'X'},{'T','T','T','T', 'X'},{'R','S','R','S', 'X'},{'I','I','M','I', 'X'}, {'A','C','G','T', 'X'}},
+                               {{'Q','H','Q','H', 'X'},{'P','P','P','P', 'X'},{'R','R','R','R', 'X'},{'L','L','L','L', 'X'}, {'A','C','G','T', 'X'}},
+                               {{'E','D','E','D', 'X'},{'A','A','A','A', 'X'},{'G','G','G','G', 'X'},{'V','V','V','V', 'X'}, {'A','C','G','T', 'X'}},
+                               {{'*','Y','*','Y', 'X'},{'S','S','S','S', 'X'},{'*','C','W','C', 'X'},{'L','F','L','F', 'X'}, {'A','C','G','T', 'X'}},
+                               {{'A','C','G','T', 'X'},{'A','C','G','T', 'X'},{'A','C','G','T', 'X'},{'A','C','G','T', 'X'}, {'A','C','G','T', 'X'}}};
 
 /* FUNCTIONS */
-std::string translate (const std::string *mrna); 
+std::string translate (const std::string *mrna);
+static float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, std::string aa_seq);  
 double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, size_t tb) {
 // 	std::string aa_seq = translate(mrna);
 // 	std::cout << "\n>MRNA\n" << *mrna << "\n>PROTEIN\n" << aa_seq << std::endl;
@@ -30,7 +35,7 @@ double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, 
 
 static void usage () {
 	std::cout
-		<< "usage: genesmith [options] <hmm file> <seq file>\n"
+		<< "usage: genesmith [options] <hmm file> <seq file> <profile file>\n"
 		<< "options:\n"
 		<< "  -p <file> profile HMM (requires -g)\n"
 		<< "  -f <file> protein fasta file (requires -g)\n"
@@ -44,7 +49,7 @@ static void usage () {
 /*========*/
 int main (int argc, char ** argv) {
 	char * fasta_file   = NULL;
-	char * profile_file = NULL;
+	char * profile_fh   = NULL;
 	const char* genetic_code = "codon_tbl.txt";
 	int c;
 	extern char *optarg;
@@ -55,16 +60,23 @@ int main (int argc, char ** argv) {
 	while ((c = getopt(argc, argv, "g:h:p:")) != -1) {
 		switch (c) {
 			case 'g': genetic_code = optarg; break;
-			case 'p': profile_file = optarg; break;
-			case 'f': fasta_file = optarg;   break;
+			case 'p': profile_fh   = optarg; break;
+			case 'f': fasta_file   = optarg; break;
 			case 'h': usage();
 			default:  usage();
 		}
 	}
 	
-	if (argc - optind != 2) usage();
+	if (argc - optind != 3) usage();
 	std::string hmm_file  =	  argv[1];
 	std::string seq_file  =	  argv[2];
+	char *profile_file    =   argv[3];  // Convert this to an cmd line option once optimized
+	
+	/* Setup HMMER Profile */
+// 	P7_HMMFILE *hfp;
+// 	if (p7_hmmfile_Open(profile_file, NULL, &hfp) != eslOK) p7_Fail("Error opening Profile", profile_file);
+// 	if (p7_hmmfile_Read(hfp, &ALPHABET, &PROFILE) != eslOK) p7_Fail("Error reading Profile");
+// 	p7_hmmfile_Close(hfp); 
 	
 	/* create alphabet */
 	std::vector<std::string> dna;
@@ -89,15 +101,67 @@ int main (int argc, char ** argv) {
 	hmm.import(hmm_file, &my_trans);
 	jobs.loadSeqs(hmm, seq_file);
 	StochHMM::seqJob *job=jobs.getJob();
+	std::vector<StochHMM::gff_feature> feat;
+	
+	std::string prev_st = "none";
+	std::string start_id;
+	std::string end_id;
+	size_t cds_start(0);
+	size_t cds_end(0);
 	
 	while (job != NULL) {
 		StochHMM::trellis trell(&hmm, job->getSeqs());
 		trell.viterbi();
 		StochHMM::traceback_path tb(&hmm);
 		trell.traceback(tb);
-		tb.print_gff(job->getHeader());
+		tb.gff(feat, job->getSeqs()->getHeader());
+		for (size_t i=0; i < feat.size(); i++) {
+			std::string st = feat[i].feature;
+			std::string id  = feat[i].seqname;
+			if (id.substr(0,1) == ">") {id.erase(0,1);}
+			if (prev_st == "GU0" and st == "start0") {
+				start_id  = id;
+				cds_start = feat[i].start;
+			}
+			if (prev_st.substr(0,3) == "cds" and st.substr(0,1) == "D") {
+				cds_end = feat[i].end;
+				std::cout   << id              << "\t" 
+						    << feat[i].source  << "\t" 
+						    << "CDS"           << "\t"
+						    << cds_start       << "\t"
+						    << cds_end         << "\t"
+						    << feat[i].score   << "\t"
+						    << feat[i].strand  << "\t"
+						    << id              << "\n";
+
+			}
+			if (prev_st.substr(0,1) == "A" and st.substr(0,3) == "cds") {
+				cds_start = feat[i].start;
+			}
+			if (prev_st == "stop1" and st == "stop2") {
+				end_id  = id;
+				cds_end = feat[i].end;
+				if (start_id == end_id) {
+					std::cout << id              << "\t" 
+						      << feat[i].source  << "\t" 
+						      << "CDS"           << "\t"
+						      << cds_start       << "\t"
+						      << cds_end         << "\t"
+						      << feat[i].score   << "\t"
+						      << feat[i].strand  << "\t"
+						      << id              << "\n";
+
+				}
+			}
+			prev_st = st;
+		}
+		//tb.print_gff(job->getHeader());
 		job = jobs.getJob();
+		feat.clear();
 	}
+	/* Global Cleanup */
+// 	p7_hmm_Destroy(PROFILE);
+// 	esl_alphabet_Destroy(ALPHABET);
 	return 0;
 }
 
@@ -106,8 +170,8 @@ int main (int argc, char ** argv) {
 /* SUBROUTINES */
 /*=============*/
 
-/* Generates protein sequence using inputted DNA sequence and translation table */
-std::string translate (const std::string *mrna){
+/* Generates protein sequence using inputted DNA sequence and Global char array of AAs */
+std::string translate (const std::string *mrna) {
 	std::string aa_seq("");
 	for (int i=0; i < mrna->length(); i += 3) {
 		int pos_one;
@@ -123,7 +187,12 @@ std::string translate (const std::string *mrna){
 				else if (s == 2) {pos_three = (*bp_to_pos).second;}
 			}
 		}
-		aa_seq.append(1, Codons[pos_one][pos_two][pos_three]);
+		aa_seq.append(1, CODONS[pos_one][pos_two][pos_three]);
 	}
 	return aa_seq;
+}
+
+/* Calculates HMMER score */
+static float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, std::string aa_seq) {
+	
 }

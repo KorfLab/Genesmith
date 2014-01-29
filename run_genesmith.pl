@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 use strict;
 use warnings 'FATAL' => 'all';
+use FAlite;
 use DataBrowser;
 use Getopt::Std;
 use vars qw($opt_h $opt_t $opt_o);
@@ -39,6 +40,16 @@ print "-------------------------------------\n\n";
 # Format Translation Table
 print ">>> Formatting Tranlation Table\n\n";
 `format_trans_tbl.pl $TRANS`;
+
+# Create Hash of Profile FHs
+print ">>> Create Hash of Profile FHs\n\n";
+my %profiles;
+foreach my $fh (glob("./hmmer3_profiles/*.hmm")) {
+	my ($kog_id)      = $fh =~ /(\w+\d+).hmm/;
+	my $id_ln         = `grep "$kog_id" $FASTA`;
+	my ($fa_id)       = $id_ln =~ />(\w+)\n/;
+	$profiles{$fa_id} = $fh;
+}
 
 
 #----------------------------#
@@ -94,22 +105,29 @@ foreach my $fh (glob("$TAXA\_*.hmm")) {
 		if ($gff =~ /test/) {
 			my ($gffset) = $gff =~ /\w+(\d+).gff/;
 			if ($gffset eq $set) {
-				my $cmd = "genesmith $fh $files{$gff} > test$set\_$TAXA\_genesmith.gff";
-				`$cmd`;
-				print "\t$cmd\n";
+				my $temp_out = "$TAXA\_test$set\_pred.gff";
+				open (OUT, ">$temp_out") or die "Error writing into OUT\n";
+				close OUT;
+				
+				# Create temp FASTA file with one ID/Seq
+				open (IN, "<$files{$gff}") or die "Error reading FASTA\n";
+				my $fasta = new FAlite(\*IN);
+				while (my $entry  = $fasta->nextEntry) {
+					my ($fa_id)   = $entry->def =~ /^>(\S+)$/;
+					my ($pro_hmm) = $profiles{$fa_id};
+					open (ONE, ">one_id.fa") or die "Error writing into OUT\n";
+					print ONE $entry;
+					close ONE;
+					
+					my $cmd = "genesmith $fh ./one_id.fa $pro_hmm > one_pred.txt";
+					`$cmd`;
+					`cat one_pred.txt >> $temp_out`;
+					print $set, "\t", $cmd, "\n";
+				}
+				close IN;
 			}
 		}
 	}
-}
-
-#-------------------#
-# Format GFF Output #
-#-------------------#
-print "\n>>> Formatting Genesmith GFF output\n";
-foreach my $fh (glob("*genesmith.gff")) {
-	my $cmd = "format_gff.pl $fh";
-	`$cmd`;
-	print "\t$cmd\n"; 
 }
 
 #---------------------------#
@@ -145,7 +163,7 @@ foreach my $fh (glob("*.gff")) {
 #--------------------#
 print "\n>>> Removing Extra Files\n";
 foreach my $fh (glob("$TAXA\_*"))       {`rm $fh`;}
-foreach my $fh (glob("*genesmith.gff")) {`rm $fh`;}
+foreach my $fh (glob("one_*"))          {`rm $fh`;}
 
 my $end_run = time();
 my $run_time = $end_run - $start_run;
