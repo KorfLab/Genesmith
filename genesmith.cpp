@@ -4,12 +4,18 @@
  Copyright (C) 2013 Ravi Dandekar & Ian Korf. All rights reserved.
 \*****************************************************************************/
 
+extern "C" {
+#include "p7_config.h"
+#include "easel.h"
+#include "hmmer.h"
+}
 #include <StochHMMlib.h>
-#include <hmmer.h>
-#include <p7_config.h>
-#include <easel.h>
 #include <iostream>
 #include <map>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h> 
 
 
 /* GLOBAL variables */
@@ -26,10 +32,13 @@ static char CODONS[5][5][5] = {{{'K','N','K','N', 'X'},{'T','T','T','T', 'X'},{'
 
 /* FUNCTIONS */
 std::string translate (const std::string *mrna);
-static float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, std::string aa_seq);  
+float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, std::string aa_seq);  
+
 double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, size_t tb) {
 // 	std::string aa_seq = translate(mrna);
+// 	double score       = hmmer_score(ALPHABET, PROFILE, aa_seq);
 // 	std::cout << "\n>MRNA\n" << *mrna << "\n>PROTEIN\n" << aa_seq << std::endl;
+// 	std::cout << "\n>HMMER Score:\t" << score << std::endl;
 	return 0.01;
 }
 
@@ -47,6 +56,7 @@ static void usage () {
 /*========*/
 /*  MAIN  */
 /*========*/
+// int main(int argc, char* const argv[]){
 int main (int argc, char ** argv) {
 	char * fasta_file   = NULL;
 	char * profile_fh   = NULL;
@@ -73,10 +83,12 @@ int main (int argc, char ** argv) {
 	char *profile_file    =   argv[3];  // Convert this to an cmd line option once optimized
 	
 	/* Setup HMMER Profile */
-// 	P7_HMMFILE *hfp;
-// 	if (p7_hmmfile_Open(profile_file, NULL, &hfp) != eslOK) p7_Fail("Error opening Profile", profile_file);
-// 	if (p7_hmmfile_Read(hfp, &ALPHABET, &PROFILE) != eslOK) p7_Fail("Error reading Profile");
-// 	p7_hmmfile_Close(hfp); 
+	P7_HMMFILE *hfp;
+	if (p7_hmmfile_Open(profile_file, NULL, &hfp) != eslOK)
+	    p7_Fail("Failed to open HMM file %s", profile_file);
+	if (p7_hmmfile_Read(hfp, &ALPHABET, &PROFILE) != eslOK)
+	    p7_Fail("Failed to read HMM");
+	p7_hmmfile_Close(hfp); 
 	
 	/* create alphabet */
 	std::vector<std::string> dna;
@@ -133,7 +145,6 @@ int main (int argc, char ** argv) {
 						    << feat[i].score   << "\t"
 						    << feat[i].strand  << "\t"
 						    << id              << "\n";
-
 			}
 			if (prev_st.substr(0,1) == "A" and st.substr(0,3) == "cds") {
 				cds_start = feat[i].start;
@@ -150,7 +161,6 @@ int main (int argc, char ** argv) {
 						      << feat[i].score   << "\t"
 						      << feat[i].strand  << "\t"
 						      << id              << "\n";
-
 				}
 			}
 			prev_st = st;
@@ -160,8 +170,8 @@ int main (int argc, char ** argv) {
 		feat.clear();
 	}
 	/* Global Cleanup */
-// 	p7_hmm_Destroy(PROFILE);
-// 	esl_alphabet_Destroy(ALPHABET);
+	p7_hmm_Destroy(PROFILE);
+	esl_alphabet_Destroy(ALPHABET);
 	return 0;
 }
 
@@ -193,6 +203,43 @@ std::string translate (const std::string *mrna) {
 }
 
 /* Calculates HMMER score */
-static float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, std::string aa_seq) {
+float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, std::string aa_seq) {
+	char *seq = (char*)aa_seq.c_str();   // Convert string into char array
 	
+	P7_BG        *bg     = NULL; /* background */
+	P7_PROFILE   *gm     = NULL; /* generic model */
+	P7_GMX       *mx     = NULL; /* viterbi matrix */
+	ESL_DSQ      *dsq    = NULL; /* digital sequence */
+	int           L      = 0;    /* length of sequence */
+	float         score;
+	
+	/* digitize sequence */
+	L = strlen(seq);
+	esl_abc_CreateDsq(ALPHABET, seq, &dsq);
+	
+	/* background */
+	bg = p7_bg_Create(ALPHABET);
+	p7_bg_SetLength(bg, L);
+	
+	/* profile */
+	gm = p7_profile_Create(PROFILE->M, ALPHABET);
+	p7_ProfileConfig(PROFILE, bg, gm, L, p7_GLOCAL);
+	static int i(0);
+	
+	/* viterbi */
+	mx = p7_gmx_Create(gm->M, L);
+    try{
+        p7_GViterbi(dsq, L, gm, mx, &score);
+    }
+    catch(...){
+        std::cerr << "Error\n";
+    }
+    
+    /* local clean up */
+	p7_gmx_Destroy(mx);
+	p7_profile_Destroy(gm);
+	p7_bg_Destroy(bg);
+	free(dsq);
+	
+	return score;
 }
