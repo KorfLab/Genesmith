@@ -37,8 +37,11 @@ float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, std::stri
 double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, size_t tb) {
 // 	std::string aa_seq = translate(mrna);
 // 	double score       = hmmer_score(ALPHABET, PROFILE, aa_seq);
-// 	std::cout << "\n>MRNA\n" << *mrna << "\n>PROTEIN\n" << aa_seq << std::endl;
-// 	std::cout << "\n>HMMER Score:\t" << score << std::endl;
+// 	std::cout << "\n>MRNA:\n"        << *mrna  << std::endl;
+// 	std::cout << "\n>PROTEIN:\n"     << aa_seq << std::endl;
+// 	std::cout << "\n>HMMER Score:\t" << score  << std::endl;
+// 	std::cout << ">Traceback:\t"     << tb     << std::endl;
+// 	std::cout << ">Position:\t"      << pos    << std::endl;
 	return 0.01;
 }
 

@@ -15,7 +15,7 @@ my $OPTS  = "none";
 my $TRANS = "gencode.txt";
 
 die "
-usage: run_genesmith.pl <GFF> <FASTA>
+usage: run_genesmith.pl [options] <GFF> <FASTA>
 
 options:
   -t <file>    translation table        Default = $TRANS
@@ -47,7 +47,8 @@ my %profiles;
 foreach my $fh (glob("./hmmer3_profiles/*.hmm")) {
 	my ($kog_id)      = $fh =~ /(\w+\d+).hmm/;
 	my $id_ln         = `grep "$kog_id" $FASTA`;
-	my ($fa_id)       = $id_ln =~ />(\w+)\n/;
+	next              if $id_ln !~ /$kog_id/;
+	my ($fa_id)       = $id_ln =~ />(\S+)\n/;
 	$profiles{$fa_id} = $fh;
 }
 

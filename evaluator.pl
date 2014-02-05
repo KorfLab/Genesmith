@@ -98,7 +98,9 @@ my $tpr = PredictionEval::calc_tpr($tp, $fn);           # Sensitivity
 my $spc = PredictionEval::calc_spc($tn, $fp);           # Specificity
 my $acc = PredictionEval::calc_acc($tp, $tn, $fp, $fn); # Accuracy
 my $mcc = PredictionEval::calc_mcc($tp, $tn, $fp, $fn); # Matthews Correlation Coefficient
-printf "MCC: %.3f\nACC: %.3f\nTPR: %.3f\nSPC: %.3f\n", $mcc, $acc, $tpr, $spc;
+print  "MCC\tACC\tTPR\tSPC\n";
+printf "%.3f\t%.3f\t%.3f\t%.3f\n", $mcc, $acc, $tpr, $spc;
+#printf "MCC: %.3f\nACC: %.3f\nTPR: %.3f\nSPC: %.3f\n", $mcc, $acc, $tpr, $spc;
 
 
 #===================================================================#

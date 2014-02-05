@@ -316,13 +316,13 @@ for (my $i=0; $i < scalar(@states); $i++) {
 			#print $st, "\t", $order, "\n";
 			my ($cds_pos) = $st =~ /cds(\d+)_\d+/;
 			my ($count)   = $st =~ /cds\d+_(\d+)/;
-			if ($order == 2) {
+			if ($count == 0) {
 				$cds_pos++   if $cds_pos != 2;
 				$cds_pos = 0 if $cds_pos == 2;
 				my $trans = "cds" . "$cds_pos";
 				$states[$i]->t_matrix($trans, 1);
 			} else {
-				$states[$i]->t_matrix($states[$i+1]->name, 1);
+				$states[$i]->t_matrix($states[$i-1]->name, 1);
 			}
 		} elsif ($st =~ /^[DA]/) {
 			my ($pos)    = $st =~ /\w\d+_(\d+)$/;
