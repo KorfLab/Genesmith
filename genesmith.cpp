@@ -35,14 +35,16 @@ std::string translate (const std::string *mrna);
 float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, std::string aa_seq);  
 
 double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, size_t tb) {
-// 	std::string aa_seq = translate(mrna);
-// 	double score       = hmmer_score(ALPHABET, PROFILE, aa_seq);
+	std::string aa_seq = translate(mrna);
+	double score       = hmmer_score(ALPHABET, PROFILE, aa_seq);
 // 	std::cout << "\n>MRNA:\n"        << *mrna  << std::endl;
 // 	std::cout << "\n>PROTEIN:\n"     << aa_seq << std::endl;
 // 	std::cout << "\n>HMMER Score:\t" << score  << std::endl;
 // 	std::cout << ">Traceback:\t"     << tb     << std::endl;
 // 	std::cout << ">Position:\t"      << pos    << std::endl;
-	return 0.01;
+// 	
+// 	return 0.01;
+	return score;
 }
 
 static void usage () {
@@ -227,7 +229,6 @@ float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, std::stri
 	/* profile */
 	gm = p7_profile_Create(PROFILE->M, ALPHABET);
 	p7_ProfileConfig(PROFILE, bg, gm, L, p7_GLOCAL);
-	static int i(0);
 	
 	/* viterbi */
 	mx = p7_gmx_Create(gm->M, L);

@@ -109,6 +109,48 @@ sub calc_ppv{
 	return $ppv;
 }
 
+# Negative Predictive Value(NPV)
+sub calc_npv{
+	my ($tn, $fn) = @_;
+	my $denom = $tn + $fn;
+	
+	my $npv;
+	if ($denom == 0) {
+		$npv = 0;
+	} else {
+		$npv = $tn/($denom);
+	}
+	return $npv;
+}
+
+# False Discovery Rate(FDR)
+sub calc_fdr{
+	my ($tp, $fp) = @_;
+	my $denom = $tp + $fp;
+	
+	my $fdr;
+	if ($denom == 0) {
+		$fdr = 0;
+	} else {
+		$fdr = $fp/($denom);
+	}
+	return $fdr;
+}
+
+# False Positive Rate(FPR)
+sub calc_fpr{
+	my ($tn, $fp) = @_;
+	my $denom = $tn + $fp;
+	
+	my $fpr;
+	if ($denom == 0) {
+		$fpr = 0;
+	} else {
+		$fpr = $fp/($denom);
+	}
+	return $fpr;
+}
+
 # Accuracy(ACC)
 sub calc_acc{
 	my ($tp, $tn, $fp, $fn) = @_;
