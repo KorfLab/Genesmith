@@ -15,16 +15,16 @@ my $OPTS  = "none";
 my $TRANS = "gencode.txt";
 
 die "
-usage: run_genesmith.pl [options] <GFF> <FASTA>
+usage: run_genesmith.pl [options] <GFF> <FASTA> <PROTEIN>
 
 options:
-  -t <file>    translation table        Default = $TRANS
-  -o <string>  genesmith order options  Default = $OPTS
+  -t <file>    translation table                      Default = $TRANS
+  -o <string>  genesmith comma separated cmd options  Default = $OPTS
   -h           help (usage details)
-" unless @ARGV == 2;
+" unless @ARGV == 3;
 $TRANS = $opt_t            if $opt_t;
 $OPTS  = edit_opts($opt_o) if $opt_o;
-my ($GFF, $FASTA) = @ARGV;
+my ($GFF, $FASTA, $PROTEIN) = @ARGV;
 my $start_run = time();
 
 
@@ -38,8 +38,8 @@ print "\nGenesmith Performance Evaluation ($TAXA\)\n";
 print "-------------------------------------\n\n";
 
 # Format Translation Table
-print ">>> Formatting Tranlation Table\n\n";
-`format_trans_tbl.pl $TRANS`;
+# print ">>> Formatting Tranlation Table\n\n";
+# `format_trans_tbl.pl $TRANS`;
 
 # Create Hash of Profile FHs
 print ">>> Create Hash of Profile FHs\n\n";
@@ -52,6 +52,16 @@ foreach my $fh (glob("./hmmer3_profiles/*.hmm")) {
 	$profiles{$fa_id} = $fh;
 }
 
+# Create Hash of KOG Protein Sequences
+print ">>> Create Hash of KOG Protein Sequences\n\n";
+my %proteins;
+open(IN, "<$PROTEIN") or die "Error reading $PROTEIN\n";
+my $prot_fasta = new FAlite(\*IN);
+while (my $entry = $prot_fasta->nextEntry) {
+	my ($fa_id)       = $entry->def =~ /^>(\S+)$/;
+	my $prot_seq      = $entry->seq;
+	$proteins{$fa_id} = $prot_seq;
+}
 
 #----------------------------#
 # Get Test and Training Sets #
@@ -78,7 +88,7 @@ foreach my $gff (@gff_fhs) {
 		}
 	}
 }
-print "\t4 sets\n\n";
+print "\t$sets sets\n\n";
 
 #-------------#
 # Create HMMs #
@@ -115,15 +125,16 @@ foreach my $fh (glob("$TAXA\_*.hmm")) {
 				my $fasta = new FAlite(\*IN);
 				while (my $entry  = $fasta->nextEntry) {
 					my ($fa_id)   = $entry->def =~ /^>(\S+)$/;
-					my ($pro_hmm) = $profiles{$fa_id};
+					my $pro_hmm = $profiles{$fa_id};
+					my $aa_seq  = $proteins{$fa_id};
 					open (ONE, ">one_id.fa") or die "Error writing into OUT\n";
 					print ONE $entry;
 					close ONE;
 					
-					my $cmd = "genesmith $fh ./one_id.fa $pro_hmm > one_pred.txt";
+					my $cmd = "genesmith $fh ./one_id.fa $pro_hmm $aa_seq > one_pred.txt";
 					`$cmd`;
 					`cat one_pred.txt >> $temp_out`;
-					print $set, "\t", $cmd, "\n";
+					print $set, "\t", $fa_id, "\n";
 				}
 				close IN;
 			}
@@ -180,19 +191,25 @@ print "\n>>> COMPLETE!\tTime: $minutes min  $seconds sec\n";
 # Generates state order option command implemented while creating HMMs
 sub edit_opts{
 	my ($cmd_opts) = @_;
-	die "OPT -o requires 8 number string\n" unless length($cmd_opts) == 8;
 	my $cmd = "";
-	my @orders = split("", $cmd_opts);
+	my @cmd_args = split(",", $cmd_opts);
 	my @opts = qw(-f -s -C -D -i -A -e -t);
+	die "OPT -o requires 8 comma separated elements\n" unless scalar(@cmd_args) == 8;
 	
-	for (my $i=0; $i < @orders; $i++) {
+	for (my $i=0; $i < @cmd_args; $i++) {
 		my $feat = $opts[$i];
 		if ($feat =~ /-C|-D|-A/) {
-			$cmd .= "$feat 3:$orders[$i] " if $feat =~ /-C/;   #CDS states    = 3
-			$cmd .= "$feat 2:$orders[$i] " if $feat =~ /-D/;   #Donor states  = 2
-			$cmd .= "$feat 2:$orders[$i] " if $feat =~ /-A/;   #Accept states = 2
+			if ($cmd_args[$i] =~ /:/) {
+				$cmd .= "$feat $cmd_args[$i] " if $feat =~ /-C/;
+				$cmd .= "$feat $cmd_args[$i] " if $feat =~ /-D/;
+				$cmd .= "$feat $cmd_args[$i] " if $feat =~ /-A/;
+			} else {
+				$cmd .= "$feat 3:$cmd_args[$i] " if $feat =~ /-C/;   #CDS states    = 3
+				$cmd .= "$feat 2:$cmd_args[$i] " if $feat =~ /-D/;   #Donor states  = 2
+				$cmd .= "$feat 2:$cmd_args[$i] " if $feat =~ /-A/;   #Accept states = 2
+			}
 		} else {
-			$cmd .= "$feat $orders[$i] ";
+			$cmd .= "$feat $cmd_args[$i] ";
 		}
 	}
 	return $cmd;
