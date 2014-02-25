@@ -96,11 +96,15 @@ my $fn = $bp_sum->{false_neg};   # Total False Neg.
 
 my $tpr = PredictionEval::calc_tpr($tp, $fn);           # Sensitivity
 my $spc = PredictionEval::calc_spc($tn, $fp);           # Specificity
+my $ppv = PredictionEval::calc_ppv($tp, $fp);           # Pos. Predictive Value
+my $npv = PredictionEval::calc_npv($tn, $fn);           # Neg. Predictive Value
+my $fdr = PredictionEval::calc_fdr($tp, $fp);           # False Discovery Rate
+my $fpr = PredictionEval::calc_fpr($tn, $fp);           # False Pos. Rate
 my $acc = PredictionEval::calc_acc($tp, $tn, $fp, $fn); # Accuracy
 my $mcc = PredictionEval::calc_mcc($tp, $tn, $fp, $fn); # Matthews Correlation Coefficient
-print  "MCC\tACC\tTPR\tSPC\n";
-printf "%.3f\t%.3f\t%.3f\t%.3f\n", $mcc, $acc, $tpr, $spc;
-#printf "MCC: %.3f\nACC: %.3f\nTPR: %.3f\nSPC: %.3f\n", $mcc, $acc, $tpr, $spc;
+print  "TP\tTN\tFP\tFN\tMCC\tACC\tTPR\tSPC\tPPV\tNPV\tFDR\tFPR\n";
+printf "%.0f\t%.0f\t%.0f\t%.0f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\n",
+        $tp, $tn, $fp, $fn, $mcc, $acc, $tpr, $spc, $ppv, $npv, $fdr, $fpr;
 
 
 #===================================================================#
