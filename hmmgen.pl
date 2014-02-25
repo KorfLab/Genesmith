@@ -18,11 +18,11 @@ die "$HELP" if $opt_h;
 # <#states>:<Order>
 my $UP      = "1:0";
 my $START   = "3:0"; 
-my $EXON    = "3:2";
+my $EXON    = "3:0";
 my $DON     = "2:0";
-my $INTRON  = "3:2";
+my $INTRON  = "3:0";
 my $ACCEP   = "2:0";
-my $STOP    = "3:2";
+my $STOP    = "3:0";
 my $DOWN    = "1:0";
 
 die "
@@ -33,7 +33,7 @@ options:
   -s <order>          start codon state info    Default = $START
   -C <#states:order>  coding state info         Default = $EXON
   -D <#states:order>  donor site state info     Default = $DON
-  -i <order>          intron body state info    Default = $INTRON
+  -i <#states:order>  intron body state info    Default = $INTRON
   -A <#states:order>  acceptor site state info  Default = $ACCEP
   -e <order>          stop codon state info     Default = $STOP
   -t <order>          downstream state info     Default = $DOWN
@@ -626,7 +626,7 @@ sub edit_cmd_opt{
 	my ($type, $DEFAULT, $cmd_opt) = @_;
 	
 	my $new_opt;
-	if ($type =~ /EXON|DON|ACCEP/) {
+	if ($type =~ /EXON|DON|ACCEP|INTRON/) {
 		die "
 		Incorrect Command Option\nFor extra help refer to [options]<-h>
 		" unless $cmd_opt =~ /\d+:\d+/;
