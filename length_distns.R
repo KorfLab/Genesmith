@@ -56,6 +56,92 @@ mapply(function(d, kog_colors)
 legend("topright", kog_species, col = kog_colors, lty = 1, cex = .70)
 
 
+#-----------------------------#
+# KOG CDS Length Distribution #
+#-----------------------------#
+densities  = lapply(kog_cds, density, na.rm = TRUE)
+length(densities) == length(kog_cds)    # sanity check
+
+table(sapply(densities, class))
+xrange    = range(sapply(densities, function(d) range(d$x)))
+yrange    = range(sapply(densities, function(d) range(d$y)))
+lrg_xlim   = c(-12486.27,100000)  # temp xlim with large range
+small_xlim = c(-1000,10000)       # temp xlim with smaller range
+
+# Plot and Label
+plot(densities[[1]], col = kog_colors[1],
+     xlim = lrg_xlim, ylim = yrange,
+     main = "KOGs CDS Length Distribution")
+mapply(function(d, kog_colors)
+  lines(d, col = kog_colors),
+       densities[-1], kog_colors[-1])
+legend("topright", kog_species, col = kog_colors, lty = 1, cex = .70)
+
+#---------------------------------#
+# KOGs CDS Frequency Distribution #
+#---------------------------------#
+densities  = lapply(kog_ex_quant, density, na.rm = TRUE)
+length(densities) == length(kog_ex_quant)    # sanity check
+
+table(sapply(densities, class))
+xrange    = range(sapply(densities, function(d) range(d$x)))
+yrange    = range(sapply(densities, function(d) range(d$y)))
+lrg_xlim   = c(-12486.27,100000)  # temp xlim with large range
+small_xlim = c(-1000,10000)       # temp xlim with smaller range
+
+# Plot and Label
+plot(densities[[1]], col = kog_colors[1],
+     xlim = lrg_xlim, ylim = yrange,
+     main = "KOGs CDS Frequency Distribution")
+mapply(function(d, kog_colors)
+  lines(d, col = kog_colors),
+       densities[-1], kog_colors[-1])
+legend("topright", kog_species, col = kog_colors, lty = 1, cex = .70)
+
+
+#--------------------------------#
+# KOG Intron Length Distribution #
+#--------------------------------#
+densities  = lapply(kog_in, density, na.rm = TRUE)
+length(densities) == length(kog_in)    # sanity check
+
+table(sapply(densities, class))
+xrange    = range(sapply(densities, function(d) range(d$x)))
+yrange    = range(sapply(densities, function(d) range(d$y)))
+lrg_xlim   = c(-12486.27,100000)  # temp xlim with large range
+small_xlim = c(-1000,10000)       # temp xlim with smaller range
+
+# Plot and Label
+plot(densities[[1]], col = kog_colors[1],
+     xlim = lrg_xlim, ylim = yrange,
+     main = "KOGs Intron Length Distribution")
+mapply(function(d, kog_colors)
+  lines(d, col = kog_colors),
+       densities[-1], kog_colors[-1])
+legend("topright", kog_species, col = kog_colors, lty = 1, cex = .70)
+
+
+#-----------------------------------#
+# KOG Intron Frequency Distribution #
+#-----------------------------------#
+densities  = lapply(kog_in_quant, density, na.rm = TRUE)
+length(densities) == length(kog_in_quant)    # sanity check
+
+table(sapply(densities, class))
+xrange    = range(sapply(densities, function(d) range(d$x)))
+yrange    = range(sapply(densities, function(d) range(d$y)))
+lrg_xlim   = c(-12486.27,100000)  # temp xlim with large range
+small_xlim = c(-1000,10000)       # temp xlim with smaller range
+
+# Plot and Label
+plot(densities[[1]], col = kog_colors[1],
+     xlim = lrg_xlim, ylim = yrange,
+     main = "KOGs Intron Frequency Distribution")
+mapply(function(d, kog_colors)
+  lines(d, col = kog_colors),
+       densities[-1], kog_colors[-1])
+legend("topright", kog_species, col = kog_colors, lty = 1, cex = .70)
+
 #---------------------------------#
 # KOG Protein Length Distribution #
 #---------------------------------#
@@ -78,53 +164,3 @@ mapply(function(d, kog_colors)
        aa_densities[-1], kog_colors[-1])
 legend("topright", kog_species, col = kog_colors, lty = 1, cex = .70)
 
-
-##################################################
-## Extra Methods to add Multiple Density Plots  ##
-##################################################
-kog_colors = c("green", "red", "blue", "black", "purple", "orange")
-kog_species = c("A.thaliana", "C.elegans", "D.melanogaster", "H.sapiens", "S.cerevisiae", "S.pombe") 
-densities = lapply(kog_genomic, density, na.rm = TRUE)
-length(densities) == length(kog_genomic)    # sanity check
-
-table(sapply(densities, class))
-xrange = range(sapply(densities, function(d) range(d$x)))
-yrange = range(sapply(densities, function(d) range(d$y)))
-tmp    = c(-12486.27,100000)
-
-plot(densities[[1]], col = kog_colors[1],
-     xlim = tmp, ylim = yrange,
-     main = "KOGs Gene Length Distribution")
-
-# Method 1
-lines(densities[[2]], col = kog_colors[2])
-lines(densities[[3]], col = kog_colors[3])
-lines(densities[[4]], col = kog_colors[4])
-lines(densities[[5]], col = kog_colors[5])
-lines(densities[[6]], col = kog_colors[6])
-
-# Method 2
-names(kog_colors) = names(densities)
-lapply(names(densities)[-1],
-       function(i)
-         lines(densities[[i]], col = kog_colors[i]))
-
-# Method 3
-mapply(function(d, kog_colors)
-  lines(d, col = kog_colors),
-       densities[-1], kog_colors[-1])
-
-## Creating Color Keys
-# Type 1: Keys with column names
-legend("topright",         # Location of the Color Key on the Plot
-       names(densities),   # Names assigned to each Column when dataset was split 
-       col = kog_colors,   # Assigned Color Vector
-       lty = 1,            # Line Type
-       cex = .60)          # Size proportion of overall Color Key
-
-# Type 2: Key with expanded Species names
-legend("topright", 
-       kog_species,        # Species names in the <kog_species> vector
-       col = kog_colors,
-       lty = 1,
-       cex = .70)
