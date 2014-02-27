@@ -67,7 +67,7 @@ while (my $entry = $prot_fasta->nextEntry) {
 #----------------------------#
 # Get Test and Training Sets #
 #----------------------------#
-my $sets = 1;
+my $sets = 1;  # Stores Total number of Sets
 print ">>> Creating TEST and TRAINING sets\n";
 `test_train_sets.pl $GFF $FASTA`;
 
@@ -151,6 +151,10 @@ my $exp_gff;
 my $pred_gff;
 my $exp_fasta;
 my $exp_set;
+
+my @params = qw(MCC ACC TPR SPC PPV NPV FDR FPR);
+my %all_params;
+
 print  "TAXA\t\tSTATES\t\tSET\t\tTP\tTN\tFP\tFN\tMCC\tACC\tTPR\tSPC\tPPV\tNPV\tFDR\tFPR\n";
 foreach my $fh (glob("*.gff")) {
 	if ($fh =~ /$TAXA\_test\d+/) {
@@ -166,15 +170,41 @@ foreach my $fh (glob("*.gff")) {
 				my $cmd = "evaluator.pl $exp_fasta $exp_gff $pred_gff";
 				my $results = `$cmd`;
 				print $TAXA, "\t\t", $st_quant, "\t\t", $pred_set, "\t\t", $results;
+				
+				# Store results to calculate the average of all sets
+				chomp($results);
+				my ($stats) = $results =~ /\t(\d+\.\d+[\s+\d+\.\d+]*)/;
+				my @eval_params = split("\t", $stats);
+				for(my $i=0; $i < @eval_params; $i++) {
+					push(@{$all_params{$params[$i]}}, $eval_params[$i]);
+				}
 			}
 		}
 	}
 }
 
+# Calculate averages for all evaluation parameters
+my %param_avgs;
+foreach my $param (keys %all_params) {
+	my $total = 0;
+	foreach my $stat (@{$all_params{$param}}) {
+		$total += $stat;
+	}
+	my $avg = $total/$sets;
+	$param_avgs{$param} = $avg;
+}
+
+print "\nTAXA\tMCC\tACC\tTPR\tSPC\tPPV\tNPV\tFDR\tFPR\n";
+print $TAXA, "\t\t";
+foreach my $param (@params) {
+	printf "%.3f\t", $param_avgs{$param};
+}
+
+
 #--------------------#
 # Remove Extra Files #
 #--------------------#
-print "\n>>> Removing Extra Files\n";
+print "\n\n>>> Removing Extra Files\n";
 foreach my $fh (glob("$TAXA\_*"))       {`rm $fh`;}
 foreach my $fh (glob("one_*"))          {`rm $fh`;}
 
