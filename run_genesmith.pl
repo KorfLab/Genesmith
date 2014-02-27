@@ -32,8 +32,9 @@ my $start_run = time();
 # Pre-processing #
 #----------------#
 # Get Species two letter abbreviation
-my $gff_info = `head -n 1 $GFF`;
-my ($TAXA) = $gff_info =~ /^(\w\w)\w+/;
+my ($TAXA) = $GFF =~ /(\w\.\w)\w+/;
+$TAXA =~ s/\.//;
+
 print "\nGenesmith Performance Evaluation ($TAXA\)\n";
 print "-------------------------------------\n\n";
 
@@ -111,12 +112,13 @@ for (my $i=0; $i < $sets; $i++) {
 #-------------------#
 print "\n>>> Running Genesmith\n";
 foreach my $fh (glob("$TAXA\_*.hmm")) {
-	my ($set) = $fh =~ /$TAXA\_\w+(\d+)_\d+.hmm/;
+	my ($set, $st_quant) = $fh =~ /$TAXA\_\w+(\d+)_(\d+).hmm/;
+	print "\tSET: $set\tHMM: $st_quant\ states\n";
 	foreach my $gff (keys %files) {
 		if ($gff =~ /test/) {
 			my ($gffset) = $gff =~ /\w+(\d+).gff/;
 			if ($gffset eq $set) {
-				my $temp_out = "$TAXA\_test$set\_pred.gff";
+				my $temp_out = "$TAXA\_test$set\_$st_quant\_pred.gff";
 				open (OUT, ">$temp_out") or die "Error writing into OUT\n";
 				close OUT;
 				
@@ -134,7 +136,6 @@ foreach my $fh (glob("$TAXA\_*.hmm")) {
 					my $cmd = "genesmith $fh ./one_id.fa $pro_hmm $aa_seq > one_pred.txt";
 					`$cmd`;
 					`cat one_pred.txt >> $temp_out`;
-					print $set, "\t", $fa_id, "\n";
 				}
 				close IN;
 			}
@@ -145,11 +146,12 @@ foreach my $fh (glob("$TAXA\_*.hmm")) {
 #---------------------------#
 # Evaluate Gene Predictions #
 #---------------------------#
-print "\n>>> Prediction Evaluation\n";
+print "\n>>> Prediction Evaluation\n\n";
 my $exp_gff;
 my $pred_gff;
 my $exp_fasta;
 my $exp_set;
+print  "TAXA\t\tSTATES\t\tSET\t\tTP\tTN\tFP\tFN\tMCC\tACC\tTPR\tSPC\tPPV\tNPV\tFDR\tFPR\n";
 foreach my $fh (glob("*.gff")) {
 	if ($fh =~ /$TAXA\_test\d+/) {
 		if ($fh =~ /\w+\d+.gff/) {
@@ -159,12 +161,11 @@ foreach my $fh (glob("*.gff")) {
 		}
 		if ($fh =~ /pred.gff/) {
 			$pred_gff = "./$fh";
-			my ($pred_set) = $pred_gff =~ /\w+(\d+)_pred.gff/;
+			my ($pred_set, $st_quant) = $pred_gff =~ /\w+(\d+)_(\d+)_pred.gff/;
 			if ($pred_set eq $exp_set) {
 				my $cmd = "evaluator.pl $exp_fasta $exp_gff $pred_gff";
 				my $results = `$cmd`;
-				print "--|SET: $pred_set\|-----------\n";
-				print $results, "\n";
+				print $TAXA, "\t\t", $st_quant, "\t\t", $pred_set, "\t\t", $results;
 			}
 		}
 	}
