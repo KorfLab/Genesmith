@@ -102,7 +102,6 @@ my $fdr = PredictionEval::calc_fdr($tp, $fp);           # False Discovery Rate
 my $fpr = PredictionEval::calc_fpr($tn, $fp);           # False Pos. Rate
 my $acc = PredictionEval::calc_acc($tp, $tn, $fp, $fn); # Accuracy
 my $mcc = PredictionEval::calc_mcc($tp, $tn, $fp, $fn); # Matthews Correlation Coefficient
-print  "TP\tTN\tFP\tFN\tMCC\tACC\tTPR\tSPC\tPPV\tNPV\tFDR\tFPR\n";
 printf "%.0f\t%.0f\t%.0f\t%.0f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\n",
         $tp, $tn, $fp, $fn, $mcc, $acc, $tpr, $spc, $ppv, $npv, $fdr, $fpr;
 
