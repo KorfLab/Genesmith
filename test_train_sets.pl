@@ -66,11 +66,16 @@ foreach my $id (keys %$alt_splice) {delete $gene_struc{$id};}
 #browse($alt_splice);
 #browse(\%gene_struc);
 
+# Temporary code (removes KOGs longer than 400,000 bps)
+if ($FASTA =~ /editted_Hs/) {
+	my @long_kogs = qw(NP_006712___KOG2854 NP_115938___KOG1568 NP_002868___KOG1433 NP_006558___KOG2783);
+	foreach my $id (@long_kogs) {delete $gene_struc{$id};}
+} 
 
 # Of the Validated KOGs create test and training sets (4 combos)
 my %seqs;   #hash of all FASTA sequences
-my $first_id = `head -n 1 $FASTA`;
-my ($taxa)   = $first_id =~ /^>(\w\w)\w+/;
+my ($taxa) = $GFF =~ /(\w\.\w)\w+/;
+$taxa =~ s/\.//;
 
 open (IN, "<$FASTA") or die "Error reading FASTA file\n";
 my $fasta = new FAlite(\*IN);
