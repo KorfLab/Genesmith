@@ -260,7 +260,7 @@ for (my $i=0; $i < scalar(@states); $i++) {
 	my $st    = $states[$i]->name;
 	my $order = $states[$i]->order;
 	my $quant = $states[$i]->st_quant;
-	
+		
 	for (my $t=0; $t < 10; $t++) {
 		if ($t == 0 and $st =~ /GU/) {
 			my $total  = tot_trans(\%{$trans_freq{$t}});
@@ -313,14 +313,22 @@ for (my $i=0; $i < scalar(@states); $i++) {
 				}
 			}
 		} elsif ($st =~ /cds\d+_\d+/) {
-			#print $st, "\t", $order, "\n";
+# 			print "STATE_INFO: ",     $st,     "\t", $order,   "\t", $quant;
+# 			print "\tGENERAL_INFO: ", $e_size, "\t", $e_order, "\t", $pad_quant, "\n";
 			my ($cds_pos) = $st =~ /cds(\d+)_\d+/;
 			my ($count)   = $st =~ /cds\d+_(\d+)/;
 			if ($count == 0) {
-				$cds_pos++   if $cds_pos != 2;
-				$cds_pos = 0 if $cds_pos == 2;
-				my $trans = "cds" . "$cds_pos";
-				$states[$i]->t_matrix($trans, 1);
+				if ($e_size == 3) {
+					$cds_pos++   if $cds_pos != 2;
+					$cds_pos = 0 if $cds_pos == 2;
+					my $trans = "cds" . "$cds_pos";
+					$states[$i]->t_matrix($trans, 1);
+				} elsif ($e_size == 1) {
+					my $trans = "cds" . "$cds_pos";
+					$states[$i]->t_matrix($trans, 1);
+				} else {
+					die "ERROR: can only support HMMs with 1 or 3 Exons states [option -C]\n";
+				}
 			} else {
 				$states[$i]->t_matrix($states[$i-1]->name, 1);
 			}
