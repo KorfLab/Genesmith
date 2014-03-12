@@ -37,7 +37,7 @@ foreach my $id (keys %$exp) {
 	for(my $i = 0; $i < $cds_exp; $i++) {
 		my $exp_start = $exp->{$id}->[$i]->[0];
 		my $exp_end   = $exp->{$id}->[$i]->[-1];
-		my $exp_len   = $exp_end - $exp_start;
+		my $exp_len   = ($exp_end - $exp_start) + 1;
 		substr($lb_exp, $exp_start, $exp_len) = "1" x $exp_len;
 	}
 	
@@ -45,7 +45,7 @@ foreach my $id (keys %$exp) {
 		for(my $i = 0; $i < $cds_obs; $i++) {
 			my $obs_start = $obs->{$id}->[$i]->[0];
 			my $obs_end   = $obs->{$id}->[$i]->[-1];
-			my $obs_len = $obs_end - $obs_start;
+			my $obs_len = ($obs_end - $obs_start) + 1;
 			substr($lb_obs, $obs_start, $obs_len) = "1" x $obs_len;
 		}
 	}
@@ -104,6 +104,20 @@ my $acc = PredictionEval::calc_acc($tp, $tn, $fp, $fn); # Accuracy
 my $mcc = PredictionEval::calc_mcc($tp, $tn, $fp, $fn); # Matthews Correlation Coefficient
 printf "%.0f\t%.0f\t%.0f\t%.0f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\n",
         $tp, $tn, $fp, $fn, $mcc, $acc, $tpr, $spc, $ppv, $npv, $fdr, $fpr;
+
+# CDS level analysis
+my $cds_match = $cds_sum->{match};      # Complete Match
+my $cds_mm    = $cds_sum->{mismatch};   # Mismatch
+my $cds_miss  = $cds_sum->{missing};    # Missing
+my $tot_cds   = $cds_match + $cds_mm + $cds_miss;
+print $tot_cds, "\t", $cds_match, "\t", $cds_mm, "\t", $cds_miss, "\n";
+
+# Gene level analysis
+my $kog_match = $gene_sum->{match};      # Complete Match
+my $kog_mm    = $gene_sum->{mismatch};   # Mismatch
+my $kog_miss  = $gene_sum->{missing};    # Missing
+my $tot_kogs  = $kog_match + $kog_mm + $kog_miss;
+print $tot_kogs, "\t", $kog_match, "\t", $kog_mm, "\t", $kog_miss, "\n";
 
 
 #===================================================================#
@@ -209,16 +223,20 @@ sub cds_eval{
 sub gene_eval{
 	my ($counts, $cds_exp) = @_;
 	my $gene_status = "";
-	
 	foreach my $ct (keys %$counts) {
 		if ($ct eq 'MATCH') {
 			my $ex_count = $counts->{$ct};
-			$gene_status = 'MATCH' if $ex_count == $cds_exp;
+			if ($ex_count == $cds_exp) {
+				$gene_status = 'MATCH';
+			}
 		} elsif ($ct eq 'MISSING') {
 			my $ex_count = $counts->{$ct};
-			$gene_status = 'MISSING' if $ex_count == $cds_exp;
+			if ($ex_count == $cds_exp) {
+				$gene_status = 'MISSING';
+			}
 		} else {
 			$gene_status = 'MISMATCH';
+			my $ex_count = $counts->{$ct};
 		}
 	}
 	return $gene_status;
