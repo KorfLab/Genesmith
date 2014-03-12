@@ -74,7 +74,7 @@ if ($FASTA =~ /editted_Hs/) {
 
 # Of the Validated KOGs create test and training sets (4 combos)
 my %seqs;   #hash of all FASTA sequences
-my ($taxa) = $GFF =~ /(\w\.\w)\w+/;
+my ($taxa) = $GFF =~ /(\w\.\w)\w+\.gff/;
 $taxa =~ s/\.//;
 
 open (IN, "<$FASTA") or die "Error reading FASTA file\n";

@@ -31,7 +31,7 @@ my $start_run = time();
 # Pre-processing #
 #----------------#
 # Get Species two letter abbreviation
-my ($TAXA) = $GFF =~ /(\w\.\w)\w+/;
+my ($TAXA) = $GFF =~ /(\w\.\w)\w+\.gff/;
 $TAXA =~ s/\.//;
 
 print "\nGenesmith Performance Evaluation ($TAXA\)\n";

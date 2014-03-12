@@ -13,7 +13,7 @@ use FAlite;
 #=============================================#
 die "usage: gff_lengths.pl <GFF> <dnaFASTA> <aaFASTA>\n" unless @ARGV == 3;
 my ($GFF, $FASTA, $AA) = @ARGV;
-my ($TAXA) = $GFF =~ /(\w\.\w)\w+/;
+my ($TAXA) = $GFF =~ /(\w\.\w)\w+\.gff/;
 $TAXA =~ s/\.//;
 
 ### Get CDS and Intron Lengths
