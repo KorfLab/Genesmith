@@ -66,11 +66,11 @@ table(sapply(densities, class))
 xrange    = range(sapply(densities, function(d) range(d$x)))
 yrange    = range(sapply(densities, function(d) range(d$y)))
 lrg_xlim   = c(-12486.27,100000)  # temp xlim with large range
-small_xlim = c(-1000,10000)       # temp xlim with smaller range
+small_xlim = c(-1000,6000)       # temp xlim with smaller range
 
 # Plot and Label
 plot(densities[[1]], col = kog_colors[1],
-     xlim = lrg_xlim, ylim = yrange,
+     xlim = small_xlim, ylim = yrange,
      main = "KOGs CDS Length Distribution")
 mapply(function(d, kog_colors)
   lines(d, col = kog_colors),
@@ -86,12 +86,11 @@ length(densities) == length(kog_ex_quant)    # sanity check
 table(sapply(densities, class))
 xrange    = range(sapply(densities, function(d) range(d$x)))
 yrange    = range(sapply(densities, function(d) range(d$y)))
-lrg_xlim   = c(-12486.27,100000)  # temp xlim with large range
-small_xlim = c(-1000,10000)       # temp xlim with smaller range
+small_xlim = c(-10,30)       # temp xlim with smaller range
 
 # Plot and Label
 plot(densities[[1]], col = kog_colors[1],
-     xlim = lrg_xlim, ylim = yrange,
+     xlim = small_xlim, ylim = yrange,
      main = "KOGs CDS Frequency Distribution")
 mapply(function(d, kog_colors)
   lines(d, col = kog_colors),
@@ -109,11 +108,11 @@ table(sapply(densities, class))
 xrange    = range(sapply(densities, function(d) range(d$x)))
 yrange    = range(sapply(densities, function(d) range(d$y)))
 lrg_xlim   = c(-12486.27,100000)  # temp xlim with large range
-small_xlim = c(-1000,10000)       # temp xlim with smaller range
+small_xlim = c(-1000,13000)       # temp xlim with smaller range
 
 # Plot and Label
 plot(densities[[1]], col = kog_colors[1],
-     xlim = lrg_xlim, ylim = yrange,
+     xlim = small_xlim, ylim = yrange,
      main = "KOGs Intron Length Distribution")
 mapply(function(d, kog_colors)
   lines(d, col = kog_colors),
@@ -130,12 +129,11 @@ length(densities) == length(kog_in_quant)    # sanity check
 table(sapply(densities, class))
 xrange    = range(sapply(densities, function(d) range(d$x)))
 yrange    = range(sapply(densities, function(d) range(d$y)))
-lrg_xlim   = c(-12486.27,100000)  # temp xlim with large range
-small_xlim = c(-1000,10000)       # temp xlim with smaller range
+small_xlim = c(-10,30)       # temp xlim with smaller range
 
 # Plot and Label
 plot(densities[[1]], col = kog_colors[1],
-     xlim = lrg_xlim, ylim = yrange,
+     xlim = small_xlim, ylim = yrange,
      main = "KOGs Intron Frequency Distribution")
 mapply(function(d, kog_colors)
   lines(d, col = kog_colors),
@@ -153,11 +151,11 @@ table(sapply(aa_densities, class))
 aa_xrange    = range(sapply(aa_densities, function(d) range(d$x)))
 aa_yrange    = range(sapply(aa_densities, function(d) range(d$y)))
 aa_lrg_xlim   = c(-12486.27,100000)  # temp xlim with large range
-aa_small_xlim = c(-1000,10000)       # temp xlim with smaller range
+aa_small_xlim = c(-100,2500)       # temp xlim with smaller range
 
 # Plot and Label
 plot(aa_densities[[1]], col = kog_colors[1],
-     xlim = aa_lrg_xlim, ylim = aa_yrange,
+     xlim = aa_small_xlim, ylim = aa_yrange,
      main = "KOGs Protein Length Distribution")
 mapply(function(d, kog_colors)
   lines(d, col = kog_colors),
