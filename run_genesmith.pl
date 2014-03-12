@@ -27,7 +27,6 @@ $OPTS  = edit_opts($opt_o) if $opt_o;
 my ($GFF, $FASTA, $PROTEIN) = @ARGV;
 my $start_run = time();
 
-
 #----------------#
 # Pre-processing #
 #----------------#
@@ -35,15 +34,15 @@ my $start_run = time();
 my ($TAXA) = $GFF =~ /(\w\.\w)\w+/;
 $TAXA =~ s/\.//;
 
-print "\nGenesmith Performance Evaluation ($TAXA\)\n";
-print "-------------------------------------\n\n";
+# print "\nGenesmith Performance Evaluation ($TAXA\)\n";
+# print "-------------------------------------\n\n";
 
 # Format Translation Table
 # print ">>> Formatting Tranlation Table\n\n";
 # `format_trans_tbl.pl $TRANS`;
 
 # Create Hash of Profile FHs
-print ">>> Create Hash of Profile FHs\n\n";
+# print ">>> Create Hash of Profile FHs\n\n";
 my %profiles;
 foreach my $fh (glob("./hmmer3_profiles/*.hmm")) {
 	my ($kog_id)      = $fh =~ /(\w+\d+).hmm/;
@@ -54,7 +53,7 @@ foreach my $fh (glob("./hmmer3_profiles/*.hmm")) {
 }
 
 # Create Hash of KOG Protein Sequences
-print ">>> Create Hash of KOG Protein Sequences\n\n";
+# print ">>> Create Hash of KOG Protein Sequences\n\n";
 my %proteins;
 open(IN, "<$PROTEIN") or die "Error reading $PROTEIN\n";
 my $prot_fasta = new FAlite(\*IN);
@@ -68,7 +67,7 @@ while (my $entry = $prot_fasta->nextEntry) {
 # Get Test and Training Sets #
 #----------------------------#
 my $sets = 1;  # Stores Total number of Sets
-print ">>> Creating TEST and TRAINING sets\n";
+# print ">>> Creating TEST and TRAINING sets\n";
 `test_train_sets.pl $GFF $FASTA`;
 
 my %files;
@@ -89,12 +88,12 @@ foreach my $gff (@gff_fhs) {
 		}
 	}
 }
-print "\t$sets sets\n\n";
+# print "\t$sets sets\n\n";
 
 #-------------#
 # Create HMMs #
 #-------------#
-print ">>> Generating HMMs\n";
+# print ">>> Generating HMMs\n";
 for (my $i=0; $i < $sets; $i++) {
 	foreach my $fh (keys %files) {
 		if ($fh =~ /train$i\.gff/) {
@@ -102,7 +101,7 @@ for (my $i=0; $i < $sets; $i++) {
 			$cmd .= $OPTS if $OPTS ne "none";
 			$cmd .= " $fh $files{$fh}";
 			`$cmd`;
-			print "\t$cmd\n";
+# 			print "\t$cmd\n";
 		}
 	}
 }
@@ -110,10 +109,10 @@ for (my $i=0; $i < $sets; $i++) {
 #-------------------#
 # Running Genesmith #
 #-------------------#
-print "\n>>> Running Genesmith\n";
+# print "\n>>> Running Genesmith\n";
 foreach my $fh (glob("$TAXA\_*.hmm")) {
 	my ($set, $st_quant) = $fh =~ /$TAXA\_\w+(\d+)_(\d+).hmm/;
-	print "\tSET: $set\tHMM: $st_quant\ states\n";
+# 	print "\tSET: $set\tHMM: $st_quant\ states\n";
 	foreach my $gff (keys %files) {
 		if ($gff =~ /test/) {
 			my ($gffset) = $gff =~ /\w+(\d+).gff/;
@@ -146,16 +145,19 @@ foreach my $fh (glob("$TAXA\_*.hmm")) {
 #---------------------------#
 # Evaluate Gene Predictions #
 #---------------------------#
-print "\n>>> Prediction Evaluation\n\n";
+# print "\n>>> Prediction Evaluation\n\n";
 my $exp_gff;
 my $pred_gff;
 my $exp_fasta;
 my $exp_set;
 
-my @params = qw(MCC ACC TPR SPC PPV NPV FDR FPR);
+my @params     = qw(MCC ACC TPR SPC PPV NPV FDR FPR);
+my @sum_lb     = qw(total match mismatch missing);
 my %all_params;
+my %cds_counts;
+my %kog_counts;
 
-print  "TAXA\t\tSTATES\t\tSET\t\tTP\tTN\tFP\tFN\tMCC\tACC\tTPR\tSPC\tPPV\tNPV\tFDR\tFPR\n";
+# print  "TAXA\t\tSTATES\t\tSET\t\tTP\tTN\tFP\tFN\tMCC\tACC\tTPR\tSPC\tPPV\tNPV\tFDR\tFPR\n";
 foreach my $fh (glob("*.gff")) {
 	if ($fh =~ /$TAXA\_test\d+/) {
 		if ($fh =~ /\w+\d+.gff/) {
@@ -168,11 +170,20 @@ foreach my $fh (glob("*.gff")) {
 			my ($pred_set, $st_quant) = $pred_gff =~ /\w+(\d+)_(\d+)_pred.gff/;
 			if ($pred_set eq $exp_set) {
 				my $cmd = "evaluator.pl $exp_fasta $exp_gff $pred_gff";
-				my $results = `$cmd`;
-				print $TAXA, "\t\t", $st_quant, "\t\t", $pred_set, "\t\t", $results;
+# 				print $TAXA, "\t\t", $st_quant, "\t\t", $pred_set, "\t\t", $results;
+				my $cmd_output = `$cmd`;
+				chomp($cmd_output);
+				my @eval_stats = split("\n", $cmd_output);
 				
 				# Store results to calculate the average of all sets
-				chomp($results);
+				my $results     = $eval_stats[0];
+				my @cds_stats = split("\t", $eval_stats[1]);
+				my @kog_stats = split("\t", $eval_stats[2]); 
+				for(my $i=0; $i < scalar(@sum_lb); $i++) {
+					$cds_counts{$sum_lb[$i]}{$pred_set} = $cds_stats[$i];
+					$kog_counts{$sum_lb[$i]}{$pred_set} = $kog_stats[$i];
+				}
+				
 				my ($stats) = $results =~ /\t(\d+\.\d+[\s+\d+\.\d+]*)/;
 				my @eval_params = split("\t", $stats);
 				for(my $i=0; $i < @eval_params; $i++) {
@@ -181,6 +192,16 @@ foreach my $fh (glob("*.gff")) {
 			}
 		}
 	}
+}
+my %cdstotals;
+my %kogtotals;
+foreach my $param (keys %cds_counts) {
+	my $cds_tot = 0;
+	my $kog_tot = 0;
+	foreach my $stat (values %{$cds_counts{$param}}) {$cds_tot += $stat;}
+	foreach my $stat (values %{$kog_counts{$param}}) {$kog_tot += $stat;}
+	$cdstotals{$param} = $cds_tot;
+	$kogtotals{$param} = $kog_tot;
 }
 
 # Calculate averages for all evaluation parameters
@@ -194,17 +215,21 @@ foreach my $param (keys %all_params) {
 	$param_avgs{$param} = $avg;
 }
 
-print "\nTAXA\tMCC\tACC\tTPR\tSPC\tPPV\tNPV\tFDR\tFPR\n";
+# print "\nTAXA\t\tMCC\tACC\tTPR\tSPC\tPPV\tNPV\tFDR\tFPR",
+#       "\tCDS_T\tCDS_M\tCDS_MM\tCDS_MI",
+#       "\tKOG_T\tKOG_M\tKOG_MM\tKOG_MI\n";
 print $TAXA, "\t\t";
 foreach my $param (@params) {
 	printf "%.3f\t", $param_avgs{$param};
 }
-
+foreach my $lb (@sum_lb) {print $cdstotals{$lb}, "\t";}
+foreach my $lb (@sum_lb) {print $kogtotals{$lb}, "\t";}
+print "\n";
 
 #--------------------#
 # Remove Extra Files #
 #--------------------#
-print "\n\n>>> Removing Extra Files\n";
+# print "\n\n>>> Removing Extra Files\n";
 foreach my $fh (glob("$TAXA\_*"))       {`rm $fh`;}
 foreach my $fh (glob("one_*"))          {`rm $fh`;}
 
@@ -212,7 +237,7 @@ my $end_run = time();
 my $run_time = $end_run - $start_run;
 my $minutes  = int($run_time / 60);
 my $seconds  = $run_time % 60;
-print "\n>>> COMPLETE!\tTime: $minutes min  $seconds sec\n";
+# print "\n>>> COMPLETE!\tTime: $minutes min  $seconds sec\n";
 
 
 #=============#
