@@ -2,20 +2,21 @@
 use strict;
 use warnings 'FATAL' => 'all';
 
-#=========================================================#
-# PURPOSE:                                                #
-# - Takes all HMMER profiles stored in the <hmm_profiles> #
-#   and converts them to HMMER 3 format                   #
-#      * <hmm_profiles> and all its profiles must be      #
-#        added manually                                   #
-# - The reformatted profiles are then stored in a new     #
-#   directory <hmmer3_profiles>                           #
-#=========================================================#
+#=====================================================================#
+# PURPOSE:                                                            #
+# - Only converts KOGs Profiles                                       #
+# - Takes all HMMER profiles stored in the HMMER 2 profiles Directory #
+#   and converts them to HMMER 3 format                               #
+#      * Directories for HMMER 2 & 3 profiles must be                 #
+#        added manually                                               #
+# - The reformatted profiles are then stored in a new                 #
+#   directory <HMMER 3 directory PATH>                                #
+#=====================================================================#
 
-my $hmmer2path = "/Users/rdandekar/Work/KorfProgramProjects/Genesmith/hmm_profiles/*.hmm";
-my $hmmer3path = "/Users/rdandekar/Work/KorfProgramProjects/Genesmith/hmmer3_profiles/";
-`mkdir $hmmer3path`;
+die "usage: profile_converter.pl <HMMER 2 profile PATH> <HMMER 3 profile PATH>\n" unless @ARGV == 2;
+my ($hmmer2path, $hmmer3path) = @ARGV;
 
+$hmmer2path .= "*.hmm";
 foreach my $fh (glob($hmmer2path)) {
 	my ($kog)   = $fh =~ /\/(KOG\d+\.hmm)$/;
 	my $profile = $hmmer3path . $kog;
