@@ -218,7 +218,7 @@ foreach my $param (keys %all_params) {
 # print "\nTAXA\t\tMCC\tACC\tTPR\tSPC\tPPV\tNPV\tFDR\tFPR",
 #       "\tCDS_T\tCDS_M\tCDS_MM\tCDS_MI",
 #       "\tKOG_T\tKOG_M\tKOG_MM\tKOG_MI\n";
-print $TAXA, "\t\t";
+print $TAXA, "\t";
 foreach my $param (@params) {
 	printf "%.3f\t", $param_avgs{$param};
 }

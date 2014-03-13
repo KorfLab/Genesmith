@@ -260,7 +260,8 @@ for (my $i=0; $i < scalar(@states); $i++) {
 	my $st    = $states[$i]->name;
 	my $order = $states[$i]->order;
 	my $quant = $states[$i]->st_quant;
-		
+	
+	# Iterate through all Labeled Sections 0-9(10 Label types total)	
 	for (my $t=0; $t < 10; $t++) {
 		if ($t == 0 and $st =~ /GU/) {
 			my $total  = tot_trans(\%{$trans_freq{$t}});
