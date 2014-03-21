@@ -150,14 +150,13 @@ my $exp_gff;
 my $pred_gff;
 my $exp_fasta;
 my $exp_set;
+my $ST_QUANT;      # Total number of states
 
-my @params     = qw(MCC ACC TPR SPC PPV NPV FDR FPR);
-my @sum_lb     = qw(total match mismatch missing);
-my %all_params;
-my %cds_counts;
-my %kog_counts;
+my $all_exp_fasta = "$TAXA\_all_exp.fa";
+my $all_exp_gff   = "$TAXA\_all_exp.gff";
+my $all_pred_gff  = "$TAXA\_all_pred.gff";
+`touch $all_exp_fasta $all_exp_gff $all_pred_gff`;
 
-# print  "TAXA\t\tSTATES\t\tSET\t\tTP\tTN\tFP\tFN\tMCC\tACC\tTPR\tSPC\tPPV\tNPV\tFDR\tFPR\n";
 foreach my $fh (glob("*.gff")) {
 	if ($fh =~ /$TAXA\_test\d+/) {
 		if ($fh =~ /\w+\d+.gff/) {
@@ -168,63 +167,38 @@ foreach my $fh (glob("*.gff")) {
 		if ($fh =~ /pred.gff/) {
 			$pred_gff = "./$fh";
 			my ($pred_set, $st_quant) = $pred_gff =~ /\w+(\d+)_(\d+)_pred.gff/;
+			$ST_QUANT = $st_quant;
 			if ($pred_set eq $exp_set) {
-				my $cmd = "evaluator.pl $exp_fasta $exp_gff $pred_gff";
-# 				print $TAXA, "\t\t", $st_quant, "\t\t", $pred_set, "\t\t", $results;
-				my $cmd_output = `$cmd`;
-				chomp($cmd_output);
-				my @eval_stats = split("\n", $cmd_output);
-				
-				# Store results to calculate the average of all sets
-				my $results     = $eval_stats[0];
-				my @cds_stats = split("\t", $eval_stats[1]);
-				my @kog_stats = split("\t", $eval_stats[2]); 
-				for(my $i=0; $i < scalar(@sum_lb); $i++) {
-					$cds_counts{$sum_lb[$i]}{$pred_set} = $cds_stats[$i];
-					$kog_counts{$sum_lb[$i]}{$pred_set} = $kog_stats[$i];
-				}
-				
-				my ($stats) = $results =~ /\t(\d+\.\d+[\s+\d+\.\d+]*)/;
-				my @eval_params = split("\t", $stats);
-				for(my $i=0; $i < @eval_params; $i++) {
-					push(@{$all_params{$params[$i]}}, $eval_params[$i]);
-				}
+# 				my $ln_ct = `grep -c ">" $exp_fasta`;
+# 				print $exp_fasta, "\t", $ln_ct, "\n";
+				`cat $exp_fasta >> $all_exp_fasta`;
+				`cat $exp_gff >> $all_exp_gff`;
+				`cat $pred_gff >> $all_pred_gff`;
+				`rm $exp_fasta $exp_gff $pred_gff`;
 			}
 		}
 	}
 }
-my %cdstotals;
-my %kogtotals;
-foreach my $param (keys %cds_counts) {
-	my $cds_tot = 0;
-	my $kog_tot = 0;
-	foreach my $stat (values %{$cds_counts{$param}}) {$cds_tot += $stat;}
-	foreach my $stat (values %{$kog_counts{$param}}) {$kog_tot += $stat;}
-	$cdstotals{$param} = $cds_tot;
-	$kogtotals{$param} = $kog_tot;
-}
 
-# Calculate averages for all evaluation parameters
-my %param_avgs;
-foreach my $param (keys %all_params) {
-	my $total = 0;
-	foreach my $stat (@{$all_params{$param}}) {
-		$total += $stat;
-	}
-	my $avg = $total/$sets;
-	$param_avgs{$param} = $avg;
-}
+# my $ln_ct = `grep -c ">" $all_exp_fasta`;
+# print $all_exp_fasta, "\t", $ln_ct, "\n";
 
-# print "\nTAXA\t\tMCC\tACC\tTPR\tSPC\tPPV\tNPV\tFDR\tFPR",
-#       "\tCDS_T\tCDS_M\tCDS_MM\tCDS_MI",
-#       "\tKOG_T\tKOG_M\tKOG_MM\tKOG_MI\n";
-print $TAXA, "\t";
-foreach my $param (@params) {
-	printf "%.3f\t", $param_avgs{$param};
-}
-foreach my $lb (@sum_lb) {print $cdstotals{$lb}, "\t";}
-foreach my $lb (@sum_lb) {print $kogtotals{$lb}, "\t";}
-print "\n";
+my $cmd = "evaluator.pl $all_exp_fasta $all_exp_gff $all_pred_gff";
+my $cmd_output = `$cmd`;
+chomp($cmd_output);
+my @eval_stats  = split("\n", $cmd_output);
+
+my $nuc_counts = $eval_stats[0];
+my $nuc_stats  = $eval_stats[1];
+my $cds_counts = $eval_stats[2];
+my $kog_counts = $eval_stats[3];
+
+print $TAXA,        "\t",
+      $nuc_stats,   "\t",
+      $cds_counts,  "\t",
+      $kog_counts,  "\t",
+      $ST_QUANT,    "\t\n";
+
 
 #--------------------#
 # Remove Extra Files #
