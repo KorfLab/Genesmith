@@ -102,7 +102,7 @@ my $fdr = PredictionEval::calc_fdr($tp, $fp);           # False Discovery Rate
 my $fpr = PredictionEval::calc_fpr($tn, $fp);           # False Pos. Rate
 my $acc = PredictionEval::calc_acc($tp, $tn, $fp, $fn); # Accuracy
 my $mcc = PredictionEval::calc_mcc($tp, $tn, $fp, $fn); # Matthews Correlation Coefficient
-printf "%.0f\t%.0f\t%.0f\t%.0f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\n",
+printf "%.0f\t%.0f\t%.0f\t%.0f\n%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\n",
         $tp, $tn, $fp, $fn, $mcc, $acc, $tpr, $spc, $ppv, $npv, $fdr, $fpr;
 
 # CDS level analysis
@@ -128,7 +128,6 @@ print $tot_kogs, "\t", $kog_match, "\t", $kog_mm, "\t", $kog_miss, "\n";
 sub gff_coords{
 	my ($gff) = @_;
 	my %coords;
-	
 	open(IN, "<$gff") or die "Could not read GFF\n";
 	while (<IN>) {
 		next unless /\S/;
