@@ -49,6 +49,7 @@ foreach my $id (keys %$exp) {
 			substr($lb_obs, $obs_start, $obs_len) = "1" x $obs_len;
 		}
 	}
+	
 	my $bp_counts  = bp_eval($lb_exp, $lb_obs, $slen);
 	my $cds_counts = cds_eval($id, $lb_exp, $lb_obs, $cds_obs, $exp, $obs);
 		
@@ -60,7 +61,7 @@ foreach my $id (keys %$exp) {
 	if (!defined $tp)  {$tp = 0;}
 	if (!defined $tn)  {$tn = 0;}
 	if (!defined $fp)  {$fp = 0;}
-	if (!defined $fn)  {$fn = 0;}
+	if (!defined $fn)  {$fn = 0;}	
 	$bp_sum->true_pos($tp);
 	$bp_sum->true_neg($tn);
 	$bp_sum->false_pos($fp);
@@ -83,7 +84,6 @@ foreach my $id (keys %$exp) {
 	$gene_sum->mismatch(1) if $gene_status eq 'MISMATCH';
 	$gene_sum->missing(1)  if $gene_status eq 'MISSING';
 }
-
 
 #---------------------------------#
 # Calculate Evaluation Parameters #
@@ -183,11 +183,11 @@ sub cds_eval{
 	my $cds_exp = scalar(@{$exp->{$id}});      # Expected quantity of CDS
 	my %counts;
 	
-	if ($cds_obs == 0) {
-		$counts{MISSING} += $cds_exp;
-	} else {
-		for(my $i = 0; $i < $cds_exp; $i++) {
-			my $exp_start = $exp->{$id}->[$i]->[0];
+	for(my $i = 0; $i < $cds_exp; $i++) {
+		if ($cds_obs == 0) {
+			$counts{MISSING} += $cds_exp;
+	    } else {
+	    	my $exp_start = $exp->{$id}->[$i]->[0];
 			my $exp_end   = $exp->{$id}->[$i]->[-1];
 			my $exp_len   = $exp_end - $exp_start;
 			my $obs_start = $obs->{$id}->[$i]->[0];
@@ -210,10 +210,8 @@ sub cds_eval{
 			    ($exp_len   == $obs_len))          {$counts{MATCH}++;}  
 			elsif ($obs_seq =~ /NA/)               {$counts{MISSING}++;} 
 			else                                   {$counts{MISMATCH}++;}
-		}
-		if ($cds_obs > $cds_exp) {
-			$counts{MISMATCH} += ($cds_obs - $cds_exp);
-		}
+
+	    }
 	}
 	return \%counts;
 }
