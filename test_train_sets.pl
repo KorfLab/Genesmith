@@ -4,6 +4,9 @@ use warnings 'FATAL' => 'all';
 use FAlite;
 use HMMstar;
 use DataBrowser;
+use Getopt::Std;
+use vars qw($opt_h $opt_s);
+getopts('h:s:');
 
 
 #=====================================#
@@ -12,8 +15,17 @@ use DataBrowser;
 #   combinations of test and training #
 #   sets                              #
 #=====================================#
-die "usage: $0 <GFF> <FASTA>\n" unless @ARGV == 2;
+my $SETS = 4;
+
+die "
+usage: $0 [options] <GFF> <FASTA>
+
+options:
+  -s <int>  # sets for cross validation  Default = $SETS
+  -h        help (view usage statement)
+" unless @ARGV == 2;
 my ($GFF, $FASTA) = @ARGV;
+$SETS = $opt_s if $opt_s;
 
 # Extract Gene Sequence Structure
 my $genome = new HMMstar::Genome($FASTA, $GFF);
@@ -66,12 +78,6 @@ foreach my $id (keys %$alt_splice) {delete $gene_struc{$id};}
 #browse($alt_splice);
 #browse(\%gene_struc);
 
-# Temporary code (removes KOGs longer than 400,000 bps)
-if ($FASTA =~ /editted_Hs/) {
-	my @long_kogs = qw(NP_006712___KOG2854 NP_115938___KOG1568 NP_002868___KOG1433 NP_006558___KOG2783);
-	foreach my $id (@long_kogs) {delete $gene_struc{$id};}
-} 
-
 # Of the Validated KOGs create test and training sets (4 combos)
 my %seqs;   #hash of all FASTA sequences
 my ($taxa) = $GFF =~ /(\w\.\w)\w+\.gff/;
@@ -87,10 +93,9 @@ close IN;
 
 my @val_kogs;
 foreach my $id (keys %gene_struc) {push(@val_kogs, $id);}
-my $sets       = 4;
-my $test_quant = int(scalar(@val_kogs)/$sets);
-
-test_train_seqs($GFF, \%seqs, \@val_kogs, $test_quant, $taxa, $sets);
+print "#Valid KOGs: ", scalar(@val_kogs), "\n";
+my $test_quant = int(scalar(@val_kogs)/$SETS);
+test_train_seqs($GFF, \%seqs, \@val_kogs, $test_quant, $taxa, $SETS);
 
 
 #===================================================================#
@@ -179,7 +184,7 @@ sub test_train_seqs{
 			my $seq = $seqs->{$id};
 			my $ann = `grep "$id" $GFF`;
 			
-			if ($f >= $pos and $f <= ($pos + $quant)) {
+			if ($f >= $pos and $f < ($pos + $quant)) {
 				print TEST ">$id\n", $seq, "\n";
 				print TESTGFF $ann;
 			} else {
