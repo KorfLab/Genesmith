@@ -102,7 +102,7 @@ for (my $i=0; $i < $sets; $i++) {
 			$cmd .= $OPTS if $OPTS ne "none";
 			$cmd .= " $fh $files{$fh}";
 			`$cmd`;
-			print "\t$cmd\n";
+# 			print "\t$cmd\n";
 		}
 	}
 }
@@ -113,7 +113,7 @@ for (my $i=0; $i < $sets; $i++) {
 print "\n>>> Running Genesmith\n";
 foreach my $fh (glob("$TAXA\_*.hmm")) {
 	my ($set, $st_quant) = $fh =~ /$TAXA\_\w+(\d+)_(\d+).hmm/;
-	print "\tSET: $set\tHMM: $st_quant\ states\n";
+# 	print "\tSET: $set\tHMM: $st_quant\ states\n";
 	foreach my $gff (keys %files) {
 		if ($gff =~ /test/) {
 			my ($gffset) = $gff =~ /\w+(\d+).gff/;
