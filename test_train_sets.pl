@@ -21,8 +21,10 @@ die "
 usage: $0 [options] <GFF> <FASTA>
 
 options:
-  -s <int>  # sets for cross validation  Default = $SETS
-  -h        help (view usage statement)
+  -s <int/str>  # sets for cross validation   Default = $SETS
+                enter <all> if you want each
+                test set to equal 1
+  -h            help (view usage statement)
 " unless @ARGV == 2;
 my ($GFF, $FASTA) = @ARGV;
 $SETS = $opt_s if $opt_s;
@@ -94,6 +96,8 @@ close IN;
 my @val_kogs;
 foreach my $id (keys %gene_struc) {push(@val_kogs, $id);}
 print "#Valid KOGs: ", scalar(@val_kogs), "\n";
+
+$SETS = scalar(@val_kogs) if $SETS eq 'all';
 my $test_quant = int(scalar(@val_kogs)/$SETS);
 test_train_seqs($GFF, \%seqs, \@val_kogs, $test_quant, $taxa, $SETS);
 
@@ -125,7 +129,7 @@ sub validate{
 						$alt_splice{$id}{accep}{$i} = $accep;
 					}
 					if ($start eq $ex_seq) { 
-						$alt_splice{$id}{start_for_ex_1} = $start;
+						$alt_splice{$id}{start_eq_ex1} = $start;
 					}
 				} else {
 					$alt_splice{$id}{first_ex} = $start;
