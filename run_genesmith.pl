@@ -69,8 +69,8 @@ while (my $entry = $prot_fasta->nextEntry) {
 my $sets = 1;  # Stores Total number of Sets
 # print ">>> Creating TEST and TRAINING sets\n";
 my $opt_set_size = "-s all";
-# `test_train_sets.pl $opt_set_size $GFF $FASTA`;
-`test_train_sets.pl $GFF $FASTA`;
+`test_train_sets.pl $opt_set_size $GFF $FASTA`;
+# `test_train_sets.pl $GFF $FASTA`;
 
 
 my %files;
