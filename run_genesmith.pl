@@ -34,15 +34,15 @@ my $start_run = time();
 my ($TAXA) = $GFF =~ /(\w\.\w)\w+\.gff/;
 $TAXA =~ s/\.//;
 
-print "\nGenesmith Performance Evaluation ($TAXA\)\n";
-print "-------------------------------------\n\n";
+# print "\nGenesmith Performance Evaluation ($TAXA\)\n";
+# print "-------------------------------------\n\n";
 
 # Format Translation Table
 # print ">>> Formatting Tranlation Table\n\n";
 # `format_trans_tbl.pl $TRANS`;
 
 # Create Hash of Profile FHs
-print ">>> Create Hash of Profile FHs\n\n";
+# print ">>> Create Hash of Profile FHs\n\n";
 my %profiles;
 foreach my $fh (glob("~/scratch/KOGs_Profiles/*.hmm")) {
 	my ($kog_id)      = $fh =~ /(\w+\d+).hmm/;
@@ -53,7 +53,7 @@ foreach my $fh (glob("~/scratch/KOGs_Profiles/*.hmm")) {
 }
 
 # Create Hash of KOG Protein Sequences
-print ">>> Create Hash of KOG Protein Sequences\n\n";
+# print ">>> Create Hash of KOG Protein Sequences\n\n";
 my %proteins;
 open(IN, "<$PROTEIN") or die "Error reading $PROTEIN\n";
 my $prot_fasta = new FAlite(\*IN);
@@ -67,9 +67,11 @@ while (my $entry = $prot_fasta->nextEntry) {
 # Get Test and Training Sets #
 #----------------------------#
 my $sets = 1;  # Stores Total number of Sets
-print ">>> Creating TEST and TRAINING sets\n";
+# print ">>> Creating TEST and TRAINING sets\n";
 my $opt_set_size = "-s all";
-`test_train_sets.pl $opt_set_size $GFF $FASTA`;
+# `test_train_sets.pl $opt_set_size $GFF $FASTA`;
+`test_train_sets.pl $GFF $FASTA`;
+
 
 my %files;
 my @gff_fhs;
@@ -83,18 +85,18 @@ foreach my $gff (@gff_fhs) {
 	foreach my $fa (@fa_fhs) {
 		my ($fh) = $gff =~ /.(\/\w+).gff/;
 		if ($fa =~ /$fh\.fa/) {
-			my ($set) = $fa =~ /\w+(\d+).fa$/;
+			my ($set) = $fa =~ /\w+[test|train](\d+).fa$/;
 			$sets = $set + 1 if $set >= $sets;
 			$files{$gff} = $fa;
 		}
 	}
 }
-print "\t$sets sets\n\n";
+# print "\t$sets sets\n\n";
 
 #-------------#
 # Create HMMs #
 #-------------#
-print ">>> Generating HMMs\n";
+# print ">>> Generating HMMs\n";
 for (my $i=0; $i < $sets; $i++) {
 	foreach my $fh (keys %files) {
 		if ($fh =~ /train$i\.gff/) {
@@ -110,13 +112,17 @@ for (my $i=0; $i < $sets; $i++) {
 #-------------------#
 # Running Genesmith #
 #-------------------#
-print "\n>>> Running Genesmith\n";
+my %pred_files;
+my $ST_QUANT;      # Total number of states
+
+# print "\n>>> Running Genesmith\n";
 foreach my $fh (glob("$TAXA\_*.hmm")) {
-	my ($set, $st_quant) = $fh =~ /$TAXA\_\w+(\d+)_(\d+).hmm/;
+	my ($set, $st_quant) = $fh =~ /$TAXA\_train(\d+)_(\d+).hmm/;
+	$ST_QUANT = $st_quant;
 # 	print "\tSET: $set\tHMM: $st_quant\ states\n";
 	foreach my $gff (keys %files) {
 		if ($gff =~ /test/) {
-			my ($gffset) = $gff =~ /\w+(\d+).gff/;
+			my ($gffset) = $gff =~ /\w+test(\d+).gff/;
 			if ($gffset eq $set) {
 				my $temp_out = "$TAXA\_test$set\_$st_quant\_pred.gff";
 				open (OUT, ">$temp_out") or die "Error writing into OUT\n";
@@ -138,6 +144,7 @@ foreach my $fh (glob("$TAXA\_*.hmm")) {
 					`cat one_pred.txt >> $temp_out`;
 				}
 				close IN;
+				$pred_files{$gffset} = $temp_out;
 			}
 		}
 	}
@@ -146,12 +153,12 @@ foreach my $fh (glob("$TAXA\_*.hmm")) {
 #---------------------------#
 # Evaluate Gene Predictions #
 #---------------------------#
-print "\n>>> Prediction Evaluation\n\n";
+# print "\n>>> Prediction Evaluation\n\n";
 my $exp_gff;
 my $pred_gff;
 my $exp_fasta;
 my $exp_set;
-my $ST_QUANT;      # Total number of states
+
 
 my $all_exp_fasta = "$TAXA\_all_exp.fa";
 my $all_exp_gff   = "$TAXA\_all_exp.gff";
@@ -161,21 +168,17 @@ my $all_pred_gff  = "$TAXA\_all_pred.gff";
 foreach my $fh (glob("*.gff")) {
 	if ($fh =~ /$TAXA\_test\d+/) {
 		if ($fh =~ /\w+\d+.gff/) {
-			($exp_set) = $fh =~ /\w+(\d+).gff/;
+			($exp_set) = $fh =~ /\w+test(\d+).gff/;
 			$exp_gff   = "./$fh";
 			$exp_fasta = $files{$exp_gff};
-		}
-		if ($fh =~ /pred.gff/) {
-			$pred_gff = "./$fh";
-			my ($pred_set, $st_quant) = $pred_gff =~ /\w+(\d+)_(\d+)_pred.gff/;
-			$ST_QUANT = $st_quant;
-			if ($pred_set eq $exp_set) {
-# 				my $ln_ct = `grep -c ">" $exp_fasta`;
-# 				print $exp_fasta, "\t", $ln_ct, "\n";
-				`cat $exp_fasta >> $all_exp_fasta`;
-				`cat $exp_gff >> $all_exp_gff`;
-				`cat $pred_gff >> $all_pred_gff`;
-				`rm $exp_fasta $exp_gff $pred_gff`;
+			$pred_gff  = $pred_files{$exp_set};
+			`cat $exp_fasta >> $all_exp_fasta`;
+			`cat $exp_gff >> $all_exp_gff`;
+			`cat $pred_gff >> $all_pred_gff`;
+			`rm $exp_fasta $exp_gff $pred_gff`;
+			my ($pred_set, $st_quant) = $pred_gff =~ /\w+test(\d+)_(\d+)_pred.gff/;
+			if ($pred_set ne $exp_set) {
+				print "PRED: ", $pred_set, "\tEXP: ", $exp_set, "\n";
 			}
 		}
 	}
@@ -204,7 +207,7 @@ print $TAXA,        "\t",
 #--------------------#
 # Remove Extra Files #
 #--------------------#
-print "\n\n>>> Removing Extra Files\n";
+# print "\n\n>>> Removing Extra Files\n";
 foreach my $fh (glob("$TAXA\_*"))       {`rm $fh`;}
 foreach my $fh (glob("one_*"))          {`rm $fh`;}
 
@@ -212,7 +215,7 @@ my $end_run = time();
 my $run_time = $end_run - $start_run;
 my $minutes  = int($run_time / 60);
 my $seconds  = $run_time % 60;
-print "\n>>> COMPLETE!\tTime: $minutes min  $seconds sec\n";
+# print "\n>>> COMPLETE!\tTime: $minutes min  $seconds sec\n";
 
 
 #=============#
