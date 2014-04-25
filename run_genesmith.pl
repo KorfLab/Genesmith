@@ -54,13 +54,24 @@ foreach my $fh (glob("~/scratch/KOGs_Profiles/*.hmm")) {
 
 # Create Hash of KOG Protein Sequences
 # print ">>> Create Hash of KOG Protein Sequences\n\n";
+`mkdir Protein_seqs`;
+my $AAPATH = "./Protein_seqs/";
+
 my %proteins;
 open(IN, "<$PROTEIN") or die "Error reading $PROTEIN\n";
 my $prot_fasta = new FAlite(\*IN);
 while (my $entry = $prot_fasta->nextEntry) {
 	my ($fa_id)       = $entry->def =~ /^>(\S+)$/;
 	my $prot_seq      = $entry->seq;
-	$proteins{$fa_id} = $prot_seq;
+	my $aa_file = $AAPATH . $fa_id . ".aa";
+# 	open (AA, ">$AAPATH$fa_id\.aa") or die "Error writing into AA\n";
+	open (AA, ">$aa_file") or die "Error writing into AA\n";
+
+	print AA $entry;
+	close AA;
+
+# 	$proteins{$fa_id} = $prot_seq;
+	$proteins{$fa_id} = $aa_file;
 }
 
 #----------------------------#
@@ -135,7 +146,7 @@ foreach my $fh (glob("$TAXA\_*.hmm")) {
 					my ($fa_id)   = $entry->def =~ /^>(\S+)$/;
 					my $pro_hmm = $profiles{$fa_id};
 					my $aa_seq  = $proteins{$fa_id};
-					open (ONE, ">one_id.fa") or die "Error writing into OUT\n";
+					open (ONE, ">one_id.fa") or die "Error writing into ONE\n";
 					print ONE $entry;
 					close ONE;
 					
@@ -210,6 +221,7 @@ print $TAXA,        "\t",
 # print "\n\n>>> Removing Extra Files\n";
 foreach my $fh (glob("$TAXA\_*"))       {`rm $fh`;}
 foreach my $fh (glob("one_*"))          {`rm $fh`;}
+`rm -R $AAPATH`;
 
 my $end_run = time();
 my $run_time = $end_run - $start_run;
