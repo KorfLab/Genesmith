@@ -12,12 +12,10 @@ extern "C" {
 }
 #include <StochHMMlib.h>
 #include <iostream>
-
 #include <fstream>
 #include <algorithm>
 #include <vector>
 #include <getopt.h>
-
 #include <map>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,6 +28,7 @@ std::map<std::string, int> BP_KEY;                                   // Dictiona
 static ESL_ALPHABET    *ALPHABET   = NULL;                           // Genomic Alphabet for StochHMM
 static P7_HMM          *PROFILE    = NULL;                           // Profile for HMMER
 static char            *KOG_SEQ    = NULL;                           // KOG AA sequence
+//static int      *BLOS62_MX[25][25] = set_matrix(62);
 static double           SW_RATIO   = NULL;
 static double           PHMM_RATIO = NULL;
 
@@ -50,7 +49,6 @@ double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, 
 // 	char *seq          = (char*)aa_seq.c_str();
 // 	double score       = hmmer_score(ALPHABET, PROFILE, seq);
 // 	double loc_score   = sw_score(seq, KOG_SEQ);
-	
 	return 0.01;	
 }
 
