@@ -34,15 +34,11 @@ my $start_run = time();
 my ($TAXA) = $GFF =~ /(\w\.\w)\w+\.gff/;
 $TAXA =~ s/\.//;
 
-# print "\nGenesmith Performance Evaluation ($TAXA\)\n";
-# print "-------------------------------------\n\n";
-
-# Format Translation Table
-# print ">>> Formatting Tranlation Table\n\n";
-# `format_trans_tbl.pl $TRANS`;
+print "\nGenesmith Performance Evaluation ($TAXA\)\n";
+print "-------------------------------------\n\n";
 
 # Create Hash of Profile FHs
-# print ">>> Create Hash of Profile FHs\n\n";
+print ">>> Create Hash of Profile FHs\n\n";
 my %profiles;
 foreach my $fh (glob("~/scratch/KOGs_Profiles/*.hmm")) {
 	my ($kog_id)      = $fh =~ /(\w+\d+).hmm/;
@@ -53,7 +49,7 @@ foreach my $fh (glob("~/scratch/KOGs_Profiles/*.hmm")) {
 }
 
 # Create Hash of KOG Protein Sequences
-# print ">>> Create Hash of KOG Protein Sequences\n\n";
+print ">>> Create Hash of KOG Single Protein FHs\n\n";
 `mkdir Protein_seqs`;
 my $AAPATH = "./Protein_seqs/";
 
@@ -64,13 +60,11 @@ while (my $entry = $prot_fasta->nextEntry) {
 	my ($fa_id)       = $entry->def =~ /^>(\S+)$/;
 	my $prot_seq      = $entry->seq;
 	my $aa_file = $AAPATH . $fa_id . ".aa";
-# 	open (AA, ">$AAPATH$fa_id\.aa") or die "Error writing into AA\n";
 	open (AA, ">$aa_file") or die "Error writing into AA\n";
 
 	print AA $entry;
 	close AA;
 
-# 	$proteins{$fa_id} = $prot_seq;
 	$proteins{$fa_id} = $aa_file;
 }
 
@@ -78,7 +72,7 @@ while (my $entry = $prot_fasta->nextEntry) {
 # Get Test and Training Sets #
 #----------------------------#
 my $sets = 1;  # Stores Total number of Sets
-# print ">>> Creating TEST and TRAINING sets\n";
+print ">>> Creating TEST and TRAINING sets\n";
 # my $opt_set_size = "-s all";
 # `test_train_sets.pl $opt_set_size $GFF $FASTA`;
 `test_train_sets.pl $GFF $FASTA`;
@@ -102,12 +96,12 @@ foreach my $gff (@gff_fhs) {
 		}
 	}
 }
-# print "\t$sets sets\n\n";
+print "\t$sets sets\n\n";
 
 #-------------#
 # Create HMMs #
 #-------------#
-# print ">>> Generating HMMs\n";
+print ">>> Generating HMMs\n";
 for (my $i=0; $i < $sets; $i++) {
 	foreach my $fh (keys %files) {
 		if ($fh =~ /train$i\.gff/) {
@@ -115,7 +109,7 @@ for (my $i=0; $i < $sets; $i++) {
 			$cmd .= $OPTS if $OPTS ne "none";
 			$cmd .= " $fh $files{$fh}";
 			`$cmd`;
-# 			print "\t$cmd\n";
+			print "\t$cmd\n";
 		}
 	}
 }
@@ -126,11 +120,11 @@ for (my $i=0; $i < $sets; $i++) {
 my %pred_files;
 my $ST_QUANT;      # Total number of states
 
-# print "\n>>> Running Genesmith\n";
+print "\n>>> Running Genesmith\n";
 foreach my $fh (glob("$TAXA\_*.hmm")) {
 	my ($set, $st_quant) = $fh =~ /$TAXA\_train(\d+)_(\d+).hmm/;
 	$ST_QUANT = $st_quant;
-# 	print "\tSET: $set\tHMM: $st_quant\ states\n";
+	print "\tSET: $set\tHMM: $st_quant\ states\n";
 	foreach my $gff (keys %files) {
 		if ($gff =~ /test/) {
 			my ($gffset) = $gff =~ /\w+test(\d+).gff/;
@@ -150,7 +144,7 @@ foreach my $fh (glob("$TAXA\_*.hmm")) {
 					print ONE $entry;
 					close ONE;
 					
-					my $cmd = "genesmith $fh ./one_id.fa $pro_hmm $aa_seq > one_pred.txt";
+					my $cmd = "genesmith -p $pro_hmm -s $aa_seq $fh ./one_id.fa > one_pred.txt";
 					`$cmd`;
 					`cat one_pred.txt >> $temp_out`;
 				}
@@ -164,12 +158,11 @@ foreach my $fh (glob("$TAXA\_*.hmm")) {
 #---------------------------#
 # Evaluate Gene Predictions #
 #---------------------------#
-# print "\n>>> Prediction Evaluation\n\n";
+print "\n>>> Prediction Evaluation\n\n";
 my $exp_gff;
 my $pred_gff;
 my $exp_fasta;
 my $exp_set;
-
 
 my $all_exp_fasta = "$TAXA\_all_exp.fa";
 my $all_exp_gff   = "$TAXA\_all_exp.gff";
@@ -218,7 +211,7 @@ print $TAXA,        "\t",
 #--------------------#
 # Remove Extra Files #
 #--------------------#
-# print "\n\n>>> Removing Extra Files\n";
+print "\n\n>>> Removing Extra Files\n";
 foreach my $fh (glob("$TAXA\_*"))       {`rm $fh`;}
 foreach my $fh (glob("one_*"))          {`rm $fh`;}
 `rm -R $AAPATH`;
@@ -227,7 +220,7 @@ my $end_run = time();
 my $run_time = $end_run - $start_run;
 my $minutes  = int($run_time / 60);
 my $seconds  = $run_time % 60;
-# print "\n>>> COMPLETE!\tTime: $minutes min  $seconds sec\n";
+print "\n>>> COMPLETE!\tTime: $minutes min  $seconds sec\n";
 
 
 #=============#
