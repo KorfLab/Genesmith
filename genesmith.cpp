@@ -22,27 +22,12 @@ extern "C" {
 #include <string.h>
 #include <math.h> 
 
-
 /* GLOBAL variables */
-std::map<std::string, int> BP_KEY;                                   // Dictionary of Base Pair Positions within Translation Table
-static ESL_ALPHABET    *ALPHABET   = NULL;                           // Genomic Alphabet for StochHMM
-static P7_HMM          *PROFILE    = NULL;                           // Profile for HMMER
-static char            *KOG_SEQ    = NULL;                           // KOG AA sequence
-//static int      *BLOS62_MX[25][25] = set_matrix(62);
-static double           SW_RATIO   = NULL;
-static double           PHMM_RATIO = NULL;
-
-// Standard Translation Table Hard Coded
-static char CODONS[5][5][5] = {{{'K','N','K','N', 'X'},{'T','T','T','T', 'X'},{'R','S','R','S', 'X'},{'I','I','M','I', 'X'}, {'A','C','G','T', 'X'}},
-                               {{'Q','H','Q','H', 'X'},{'P','P','P','P', 'X'},{'R','R','R','R', 'X'},{'L','L','L','L', 'X'}, {'A','C','G','T', 'X'}},
-                               {{'E','D','E','D', 'X'},{'A','A','A','A', 'X'},{'G','G','G','G', 'X'},{'V','V','V','V', 'X'}, {'A','C','G','T', 'X'}},
-                               {{'*','Y','*','Y', 'X'},{'S','S','S','S', 'X'},{'*','C','W','C', 'X'},{'L','F','L','F', 'X'}, {'A','C','G','T', 'X'}},
-                               {{'A','C','G','T', 'X'},{'A','C','G','T', 'X'},{'A','C','G','T', 'X'},{'A','C','G','T', 'X'}, {'A','C','G','T', 'X'}}};
-
-/* FUNCTIONS */
-std::string translate (const std::string *mrna);
-float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, char *seq);  
-//float sw_score(char *seq, char *KOG_SEQ);  
+static ESL_ALPHABET    *ALPHABET = NULL; // Genomic Alphabet for StochHMM
+static P7_HMM          *PROFILE  = NULL; // Profile for HMMER
+static char            *KOG_SEQ  = NULL; // KOG AA sequence
+static double           ASCALE   = 1.0;  // alignment scaling factor
+static double           PSCALE   = 1.0;  // profile scaling factor
 
 double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, size_t tb) {
 // 	std::string aa_seq = translate(mrna);
@@ -50,6 +35,46 @@ double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, 
 // 	double score       = hmmer_score(ALPHABET, PROFILE, seq);
 // 	double loc_score   = sw_score(seq, KOG_SEQ);
 	return 0.01;	
+}
+
+static float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, char *seq) {
+// 	char *seq = (char*)aa_seq.c_str();   // Convert string into char array
+		
+	P7_BG        *bg     = NULL; /* background */
+	P7_PROFILE   *gm     = NULL; /* generic model */
+	P7_GMX       *mx     = NULL; /* viterbi matrix */
+	ESL_DSQ      *dsq    = NULL; /* digital sequence */
+	int           L      = 0;    /* length of sequence */
+	float         score;
+	
+	/* digitize sequence */
+	L = strlen(seq);
+	esl_abc_CreateDsq(ALPHABET, seq, &dsq);
+	
+	/* background */
+	bg = p7_bg_Create(ALPHABET);
+	p7_bg_SetLength(bg, L);
+	
+	/* profile */
+	gm = p7_profile_Create(PROFILE->M, ALPHABET);
+	p7_ProfileConfig(PROFILE, bg, gm, L, p7_GLOCAL);
+	
+	/* viterbi */
+	mx = p7_gmx_Create(gm->M, L);
+    try{
+        p7_GViterbi(dsq, L, gm, mx, &score);
+    }
+    catch(...){
+        std::cerr << "Error\n";
+    }
+    
+    /* local clean up */
+	p7_gmx_Destroy(mx);
+	p7_profile_Destroy(gm);
+	p7_bg_Destroy(bg);
+	free(dsq);
+	
+	return score;
 }
 
 static void usage () {
@@ -91,13 +116,13 @@ int main (int argc, char ** argv) {
 			default:  usage();
 		}
 	}
-	if (sw_coeff   != NULL) {SW_RATIO   = atof(sw_coeff);}
-	if (phmm_coeff != NULL) {PHMM_RATIO = atof(phmm_coeff);}
+	if (sw_coeff   != NULL) {ASCALE = atof(sw_coeff);}
+	if (phmm_coeff != NULL) {PSCALE = atof(phmm_coeff);}
 	
 	
 	if (argc - optind != 2) usage();
-	std::string hmm_file     =   argv[optind];  // Gene Model for StochHMM
-	std::string seq_file     =   argv[optind+1];  // KOG genomic DNA sequence
+	std::string hmm_file = argv[optind];   // Gene Model for StochHMM
+	std::string seq_file = argv[optind+1]; // KOG genomic DNA sequence
 		
 	if (protein_file != NULL) {
 		std::ifstream aa_file;
@@ -113,7 +138,6 @@ int main (int argc, char ** argv) {
 		aa_file.close();
 		KOG_SEQ = (char*)protein_seq.c_str();
 	}
-	
 	
 	/* Setup HMMER Profile */
 	if (profile_file != NULL) {
@@ -131,13 +155,7 @@ int main (int argc, char ** argv) {
 	dna.push_back("C");
 	dna.push_back("G");
 	dna.push_back("T");
-	StochHMM::track tr = dna;
-	
-	/* Insert Position Values for BP_KEY */
-	BP_KEY.insert(std::pair<std::string, int>("A", 0));
-	BP_KEY.insert(std::pair<std::string, int>("C", 1));
-	BP_KEY.insert(std::pair<std::string, int>("G", 2));
-	BP_KEY.insert(std::pair<std::string, int>("T", 3));
+	StochHMM::track tr = dna;	
 		
 	/* decode & output */
 	StochHMM::StateFuncs my_trans;
@@ -212,70 +230,4 @@ int main (int argc, char ** argv) {
 }
 
 
-/*=============*/
-/* SUBROUTINES */
-/*=============*/
-
-/* Generates protein sequence using inputted DNA sequence and Global char array of AAs */
-std::string translate (const std::string *mrna) {
-	std::string aa_seq("");
-	for (int i=0; i < mrna->length(); i += 3) {
-		int pos_one;
-		int pos_two;
-		int pos_three;
-		std::string codon    = mrna->substr(i,3);
-		for (size_t s=0; s < codon.length(); s++) {
-			std::string bp = codon.substr(s,1);
-			std::map<std::string, int>::iterator bp_to_pos = BP_KEY.find(bp);
-			if (bp_to_pos != BP_KEY.end()) {
-				if      (s == 0) {pos_one   = (*bp_to_pos).second;}
-				else if (s == 1) {pos_two   = (*bp_to_pos).second;}
-				else if (s == 2) {pos_three = (*bp_to_pos).second;}
-			}
-		}
-		aa_seq.append(1, CODONS[pos_one][pos_two][pos_three]);
-	}
-	return aa_seq;
-}
-
-/* Calculates HMMER score */
-float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, char *seq) {
-// 	char *seq = (char*)aa_seq.c_str();   // Convert string into char array
-		
-	P7_BG        *bg     = NULL; /* background */
-	P7_PROFILE   *gm     = NULL; /* generic model */
-	P7_GMX       *mx     = NULL; /* viterbi matrix */
-	ESL_DSQ      *dsq    = NULL; /* digital sequence */
-	int           L      = 0;    /* length of sequence */
-	float         score;
-	
-	/* digitize sequence */
-	L = strlen(seq);
-	esl_abc_CreateDsq(ALPHABET, seq, &dsq);
-	
-	/* background */
-	bg = p7_bg_Create(ALPHABET);
-	p7_bg_SetLength(bg, L);
-	
-	/* profile */
-	gm = p7_profile_Create(PROFILE->M, ALPHABET);
-	p7_ProfileConfig(PROFILE, bg, gm, L, p7_GLOCAL);
-	
-	/* viterbi */
-	mx = p7_gmx_Create(gm->M, L);
-    try{
-        p7_GViterbi(dsq, L, gm, mx, &score);
-    }
-    catch(...){
-        std::cerr << "Error\n";
-    }
-    
-    /* local clean up */
-	p7_gmx_Destroy(mx);
-	p7_profile_Destroy(gm);
-	p7_bg_Destroy(bg);
-	free(dsq);
-	
-	return score;
-}
 
