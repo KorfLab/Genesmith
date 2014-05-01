@@ -15,28 +15,36 @@ while (my $line = <DATA>) {$HELP .= $line;}
 die "$HELP" if $opt_h;
 
 # DEFAULT setting
-# <#states>:<Order>
-my $UP      = "1:0";
-my $START   = "3:0"; 
-my $EXON    = "3:0";
-my $DON     = "2:0";
-my $INTRON  = "3:0";
-my $ACCEP   = "2:0";
-my $STOP    = "3:0";
-my $DOWN    = "1:0";
+my $UP      = "1";   # upstream
+my $START   = "8:0"; # includes canonical ATG at the end
+my $EXON    = "1";   # always 3 states
+my $DON     = "5:0"; # starts with canonical GT
+my $INTRON  = "1";   # always 3 states
+my $ACCEP   = "6:0"; # ends with canonical AG
+my $STOP    = "6:0"; # starts with stop codon
+my $DOWN    = "1";
+
+# optional stuff that we want to do
+my $BRANCH;
+my $POLYA;
 
 die "
 usage: $0 [options] <GFF> <FASTA>
 
-options:
-  -f <order>          upstream state info       Default = $UP
-  -s <order>          start codon state info    Default = $START
-  -C <#states:order>  coding state info         Default = $EXON
-  -D <#states:order>  donor site state info     Default = $DON
-  -i <#states:order>  intron body state info    Default = $INTRON
-  -A <#states:order>  acceptor site state info  Default = $ACCEP
-  -e <order>          stop codon state info     Default = $STOP
-  -t <order>          downstream state info     Default = $DOWN
+universal parameters:
+  -5 <order>          upstream state info       Default = $UP
+  -m <length:order>   start codon state info    Default = $START
+  -c <order>          coding state info         Default = $EXON
+  -d <length:order>   donor site state info     Default = $DON
+  -i <order>          intron body state info    Default = $INTRON
+  -a <length:order>   acceptor site state info  Default = $ACCEP
+  -s <order>          stop codon state info     Default = $STOP
+  -3 <order>          downstream state info     Default = $DOWN
+
+optional parameters
+  -b <file>           branch point
+  -p <file>           poly-A tail
+  
   -h                  help (format and details)
 " unless @ARGV == 2;
 
