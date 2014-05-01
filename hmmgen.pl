@@ -488,7 +488,7 @@ foreach my $id (keys %gene_struc) {
 					my $intron  = $gene_struc{$id}{Introns}{$i};           # Full Intron
 					my $don     = substr($intron, 0, $d_size);             # Donor Site
 					my $accep   = substr($intron, -$a_size, $a_size);      # Acceptor Site
-					my $in_len  = length($intron) - ($d_size + $a_size);   # Length of Intron Body (without Splice Sites)
+					my $in_len  = length($intron) - ($d_size + $a_size);   # Length of Intron Body (with Splice Sites)
 					my $in_body = substr($intron, $d_size, $in_len);       # Intron Body
 					
 					if ($st =~ /^D/) {
@@ -561,11 +561,8 @@ foreach my $id (keys %gene_struc) {
 my $DATE      = `date`; chomp($DATE);
 my $ST_COUNT  = scalar(@states);
 my $TRACEBACK = "[FUNCTION:	HMMER	TRACK:	SEQ	COMBINE_LABEL:	C	TO_LABEL:	U]";
-my ($FH)      = $FASTA =~ /(\w+).fa/;
-$FH          .= "_$ST_COUNT" . ".hmm";
 
-open(OUT, ">$FH") or die "Could not write into OUT\n";
-print OUT "#STOCHHMM MODEL FILE
+print "#STOCHHMM MODEL FILE
 
 <MODEL INFORMATION>
 ======================================================
@@ -598,36 +595,33 @@ foreach my $obj (@states) {
 	my $trans     = $obj->t_matrix;
 	my $em_counts = $obj->emission;
 	
-	print OUT "##################################################\n";
-	print OUT "STATE:\n";
-	print OUT "\tNAME:\t$st\n";
-	print OUT "\tGFF_DESC:\t$st\n";
-	print OUT "\tPATH_LABEL: $label\n";
-	print OUT "TRANSITION:	STANDARD:	P(X)\n";
+	print  "##################################################\n";
+	print  "STATE:\n";
+	print  "\tNAME:\t$st\n";
+	print  "\tGFF_DESC:\t$st\n";
+	print  "\tPATH_LABEL: $label\n";
+	print  "TRANSITION:	STANDARD:	P(X)\n";
 	foreach my $t (keys %$trans) {
 		my $t_prob = $trans->{$t};
-		print OUT "\t$t:\t$t_prob";
-		if ($st =~ /^D/  and $t =~ /^i/) {print OUT "\t$TRACEBACK";}
-		if ($st =~ /^GD/ and $st eq $t)  {print OUT "\t$TRACEBACK";}
-		print OUT "\n";
+		print  "\t$t:\t$t_prob";
+		if ($st =~ /^D/  and $t =~ /^i/) {print  "\t$TRACEBACK";}
+		if ($st =~ /^GD/ and $st eq $t)  {print  "\t$TRACEBACK";}
+		print  "\n";
 	}
 	# Get Final Emission
 	my %em_rows = get_em_rows($order); 
-	my $em_output = em_table($em_counts, \%em_rows, $order);
+	my $em_put = em_table($em_counts, \%em_rows, $order);
 	
-	print OUT "EMISSION:	SEQ:	COUNTS\n";
-	print OUT "\tORDER:	$order	AMBIGUOUS:	AVG\n";
-	print OUT $em_output;
+	print  "EMISSION:	SEQ:	COUNTS\n";
+	print  "\tORDER:	$order	AMBIGUOUS:	AVG\n";
+	print  $em_put;
 }
-print OUT "##################################################\n";
-print OUT "//END\n";
-
-close OUT;
-
+print  "##################################################\n";
+print  "//END\n";
 
 
 #===================================================================#
-# SUBROUTINES														#
+# SUBRINES														#
 #===================================================================#
 
 # Changes default parameter based on command line input
