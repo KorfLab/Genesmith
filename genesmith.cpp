@@ -9,6 +9,10 @@ extern "C" {
 #include "esl_config.h"
 #include "easel.h"
 #include "hmmer.h"
+#include "ik/toolbox.h"
+#include "ik/sequence.h"
+#include "ik/align.h"
+
 }
 #include <StochHMMlib.h>
 #include <iostream>
