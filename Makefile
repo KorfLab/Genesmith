@@ -18,7 +18,7 @@ default:
 	make $(APP1)
 
 $(APP1): $(SRC1)
-	g++ -w -o  $(APP1) $(SRC1) -lm $(STOCH) $(HMMER) $(EASEL) $(IK)
+	g++ -w -O2 -o  $(APP1) $(SRC1) -lm $(STOCH) $(HMMER) $(EASEL) $(IK)
 
 clean:
 	rm -f *.o $(APP1)
