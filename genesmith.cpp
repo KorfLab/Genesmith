@@ -191,7 +191,7 @@ int main (int argc, char ** argv) {
 				start_id  = id;
 				cds_start = feat[i].start;
 			}
-			if (prev_st.substr(0,3) == "cds" and st.substr(0,1) == "D") {
+			if (prev_st.substr(0,3) == "cds" and st.substr(0,3) == "don") {
 				cds_end = feat[i].end;
 				std::cout   << id              << "\t" 
 						    << feat[i].source  << "\t" 
@@ -202,7 +202,7 @@ int main (int argc, char ** argv) {
 						    << feat[i].strand  << "\t"
 						    << id              << "\n";
 			}
-			if (prev_st.substr(0,1) == "A" and st.substr(0,3) == "cds") {
+			if (prev_st.substr(0,5) == "accep" and st.substr(0,3) == "cds") {
 				cds_start = feat[i].start;
 			}
 			if (prev_st == "stop1" and st == "stop2") {

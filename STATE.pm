@@ -4,7 +4,7 @@ use warnings 'FATAL' => 'all';
 
 # State Object
 sub new{
-	my ($class, $name, $label, $order, $st_quant) = @_;
+	my ($class, $name, $label, $order, $st_length) = @_;
 	my $t_matrix = {};
 	my $emission = {};
 	
@@ -12,7 +12,7 @@ sub new{
 		name     => $name,
 		label    => $label,
 		order    => $order,
-		st_quant => $st_quant,
+		st_length => $st_length,
 		t_matrix => $t_matrix,
 		emission => $emission,
 	};
@@ -39,10 +39,11 @@ sub order{
 	$self->{order} = $order;
 }
 
-sub st_quant{
-	my ($self, $quant) = @_;
-	return $self->{st_quant} unless defined $quant;
-	$self->{st_quant} = $quant;
+# Now this is substr length for parsing rather than quantity of states
+sub st_length{
+	my ($self, $st_length) = @_;
+	return $self->{st_length} unless defined $st_length;
+	$self->{st_length} = $st_length;
 }
 
 sub t_matrix{
@@ -52,34 +53,28 @@ sub t_matrix{
 }
 
 sub emission{
-	my ($self, $st, $order, $tot_trans, $seq) = @_;
-	return $self->{emission} unless defined($st and $order and $tot_trans and $seq);
+	my ($self, $st, $order, $seq) = @_;
+	return $self->{emission} unless defined($st and $order and $seq);
 	
-	if ($order == 0) {
-		if ($tot_trans == 1) {
-			my ($pos) = $st =~ /(\d+)$/;
-			my $nt    = uc substr($seq, $pos, 1);
-			$self->{emission}->{$nt}++;
-		} else {
-			for (my $i=0; $i < length($seq); $i++) {
-				my $nt = uc substr($seq, $i, 1);
-				$self->{emission}->{$nt}++;
-			}
-		}
-	} else {
-		if ($tot_trans == 1) {
-			my $pos;
-			($pos) = $st =~ /\w+(\d+)$/  if $st =~ /\w+\d+/;
-			($pos) = $st =~ /\d+_(\d+)$/ if $st =~ /\w+\d+_\d+/;
-			my $ctx = uc substr($seq, $pos, $order);
-			my $nt = uc substr($seq, ($order + $pos), 1);
+	if ($st =~ /start|stop|don|accep|branch\d+/) {
+		my $pos;
+		($pos) = $st =~ /\w+(\d+)$/;
+		my $ctx = uc substr($seq, $pos, $order);
+		my $nt = uc substr($seq, ($order + $pos), 1);
+		if ($ctx =~ /\S+/) {
 			$self->{emission}->{$ctx}->{$nt}++;
 		} else {
-			for (my $i = $order; $i < length($seq); $i++) {
-				my $ctx = uc substr($seq, $i - $order, $order);
-				my $nt = uc substr($seq, $i, 1);
-				next unless $nt =~ /[ACGT]/;
+			$self->{emission}->{$nt}++;
+		}
+	} else {
+		for (my $i = $order; $i < length($seq); $i++) {
+			my $ctx = uc substr($seq, $i - $order, $order);
+			my $nt = uc substr($seq, $i, 1);
+			next unless $nt =~ /[ACGT]/;
+			if ($ctx =~ /\S+/) {
 				$self->{emission}->{$ctx}->{$nt}++;
+			} else {
+				$self->{emission}->{$nt}++;
 			}
 		}
 	}

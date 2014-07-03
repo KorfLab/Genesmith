@@ -1,24 +1,21 @@
 #!/usr/bin/perl
 use strict;
 use warnings 'FATAL' => 'all';
+use DataBrowser;
 
-#=====================================================================#
-# PURPOSE:                                                            #
-# - Only converts KOGs Profiles                                       #
-# - Takes all HMMER profiles stored in the HMMER 2 profiles Directory #
-#   and converts them to HMMER 3 format                               #
-#      * Directories for HMMER 2 & 3 profiles must be                 #
-#        added manually                                               #
-# - The reformatted profiles are then stored in a new                 #
-#   directory <HMMER 3 directory PATH>                                #
-#=====================================================================#
 
-die "usage: profile_converter.pl <HMMER 2 profile PATH> <HMMER 3 profile PATH>\n" unless @ARGV == 2;
-my ($hmmer2path, $hmmer3path) = @ARGV;
+# Convert all HMMER2 profiles to HMMER3 format within KOG directory in Genesmith
+my $MAINPATH = "/Users/rdandekar/Work/KorfProgramProjects/Genesmith/KOG/";
+my %profiles;
 
-$hmmer2path .= "*.hmm";
-foreach my $fh (glob($hmmer2path)) {
-	my ($kog)   = $fh =~ /\/(KOG\d+\.hmm)$/;
-	my $profile = $hmmer3path . $kog;
-	`hmmconvert --outfmt 3/b $fh > $profile`;
+foreach my $fh (glob($MAINPATH . "*")) {
+	my ($kog_id) = $fh =~ /\/Genesmith\/KOG\/(\S+)/;
+	$profiles{$kog_id} = $fh . "/$kog_id\.hmm" if $kog_id ne "warnings";
+}
+
+foreach my $id (keys %profiles) {
+	my $new_profile = $id . ".hmm";
+	my ($path) = $profiles{$id} =~ /(\S+\/$id\/)$new_profile/; 
+	`hmmconvert --outfmt 3/b $profiles{$id} > $new_profile`;
+	`mv $new_profile $profiles{$id}`;
 }
