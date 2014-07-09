@@ -25,11 +25,8 @@ foreach my $id (keys %$exp) {
 	my $slen = $slengths->{$id};               # FASTA sequence length
 	my $cds_exp = scalar(@{$exp->{$id}});      # Expected quantity of CDS per gene 
 	my $cds_obs;                               # Predicted quantity of CDS per gene
-	if (defined @{$obs->{$id}}) {
-		$cds_obs = scalar(@{$obs->{$id}});
-	} else {
-		$cds_obs = 0;
-	}
+	if (@{$obs->{$id}}) {$cds_obs = scalar(@{$obs->{$id}});}
+	else                {$cds_obs = 0;}
 	my $lb_exp = "0" x $slen;
 	my $lb_obs = "0" x $slen;	
 	
@@ -102,7 +99,7 @@ my $fdr = PredictionEval::calc_fdr($tp, $fp);           # False Discovery Rate
 my $fpr = PredictionEval::calc_fpr($tn, $fp);           # False Pos. Rate
 my $acc = PredictionEval::calc_acc($tp, $tn, $fp, $fn); # Accuracy
 my $mcc = PredictionEval::calc_mcc($tp, $tn, $fp, $fn); # Matthews Correlation Coefficient
-printf "%.0f\t%.0f\t%.0f\t%.0f\n%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t",
+printf "%.0f\t%.0f\t%.0f\t%.0f\n%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\n",
         $tp, $tn, $fp, $fn, $mcc, $acc, $tpr, $spc, $ppv, $npv, $fdr, $fpr;
 
 # CDS level analysis
@@ -110,7 +107,7 @@ my $cds_match = $cds_sum->{match};      # Complete Match
 my $cds_mm    = $cds_sum->{mismatch};   # Mismatch
 my $cds_miss  = $cds_sum->{missing};    # Missing
 my $tot_cds   = $cds_match + $cds_mm + $cds_miss;
-print $tot_cds, "\t", $cds_match, "\t", $cds_mm, "\t", $cds_miss, "\t";
+print $tot_cds, "\t", $cds_match, "\t", $cds_mm, "\t", $cds_miss, "\n";
 
 # Gene level analysis
 my $kog_match = $gene_sum->{match};      # Complete Match
