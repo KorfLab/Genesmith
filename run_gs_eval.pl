@@ -87,7 +87,7 @@ my ($taxa)  = $GFF =~ /\/?(\w+\.*\w+\d*)\.gff$/;
 #----------------------------#
 # Get Test and Training Sets #
 #----------------------------#
-print ">>> Creating TEST and TRAINING sets\n";
+# print ">>> Creating TEST and TRAINING sets\n";
 `test_train_sets.pl $GFF $FASTA`;
 
 my $sets = 1;  # Stores Total number of Sets
@@ -97,14 +97,14 @@ foreach my $fh (glob("./$taxa\_*")) {
 		$sets = $set + 1 if $set >= $sets;
 	}
 }
-print "\t$sets sets\n\n";
+# print "\t$sets sets\n\n";
 
 
 #-------------#
 # Create HMMs #
 #-------------#
 my $PATH   = "./HMM/";
-print ">>> Generating HMMs\n";
+# print ">>> Generating HMMs\n";
 for (my $i=0; $i < $sets; $i++) {
 	my $file = "$taxa\_train$i";
 	my $em_path = $PATH . $file . "/";
@@ -112,10 +112,14 @@ for (my $i=0; $i < $sets; $i++) {
 	my $gff_fh = "./$taxa\_train$i\.gff";
 	my $fa_fh  = "./$taxa\_train$i\.fa";
 	if (!-d $em_path) {
-		`run_hmmgen.pl $gff_fh $fa_fh`;
-		print "\t$em_path\tDIRECTORY CREATED\n";
+		my $cmd = "run_hmmgen.pl";
+		$cmd   .= " -b $BRANCH" if $BRANCH =~ /^Y$/;
+		$cmd   .= " -D $L_DON -A $L_ACCEP -U $L_UP -E $L_DOWN";
+		$cmd   .= " $gff_fh $fa_fh";
+		`$cmd`;
+# 		print "\t$em_path\tDIRECTORY CREATED\n";
 	} else {
-		print "\t$em_path\tDIRECTORY EXISTS\n";
+# 		print "\t$em_path\tDIRECTORY EXISTS\n";
 	}
 
 	my $cmd = "hmm_assmbl.pl";
@@ -124,14 +128,14 @@ for (my $i=0; $i < $sets; $i++) {
 	$cmd   .= " -b $BRANCH" if $BRANCH =~ /^Y$/;
 	$cmd   .= " $gff_fh $fa_fh";
 	`$cmd`;
-	print "\t$cmd\n\n";
+# 	print "\t$cmd\n\n";
 }
 
 
 #-------------------#
 # Running Genesmith #
 #-------------------#
-print "\n>>> Running Genesmith\n";
+# print "\n>>> Running Genesmith\n";
 my $output_fh = "$taxa\_pred.gff";
 my $exp_fa    = "$taxa\_exp.fa";
 my $exp_gff   = "$taxa\_exp.gff";
@@ -149,14 +153,14 @@ foreach my $fh (glob("./$taxa\_*\.hmm")) {
 	`genesmith $fh $test_fa >> $output_fh`;
 	`cat $test_fa  >> $exp_fa`;
 	`cat $test_gff >> $exp_gff`;
-	print "\tgenesmith $fh\ $test_fa\ >> $output_fh\n";
+# 	print "\tgenesmith $fh\ $test_fa\ >> $output_fh\n";
 }
 
 
 #----------------------------#
 # Evaluate Gene Predications #
 #----------------------------#
-print "\n>>> Evaluate Predictions\n";
+# print "\n>>> Evaluate Predictions\n";
 my $results = `evaluator.pl $exp_fa $exp_gff $output_fh`;
 chomp($results);
 
@@ -166,10 +170,10 @@ my $nuc_stats  = $eval_stats[1];
 my $cds_counts = $eval_stats[2];
 my $kog_counts = $eval_stats[3];
 
-print $taxa,       "\t",
-      $nuc_stats,  "\t";
-print $cds_counts, "\t",
-      $kog_counts, "\t\n";
+print $taxa,       "\t";
+print $nuc_stats,  "\t\n";
+print $cds_counts, "\t";
+print $kog_counts, "\t\n";
 
 
 ### Remove Extra Files
