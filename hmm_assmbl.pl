@@ -133,21 +133,19 @@ for (my $i=0; $i < @st_quant; $i++) {
 			
 			# Intron States, Branch States - Conditional
 			if ($name =~ /i/ and $BRANCH =~ /^\d+$/) {
-				for (my $r=0; $r < 3; $r++) {
-					# Intron Body States before and after Branch Motif
-					my @in_branch = qw(branch_i0 branch_i1 branch_i2);
-					foreach my $st (@in_branch) {
-						my $st_name = $st . "_$r";
-						my $obj = new STATE($st_name, 'I', $INTRON, 1);
-						push(@states, $obj);
-					}
-				
-					# Branch Motif States
-					for (my $m=0; $m < length($MOTIF); $m++) {
-						my $st_name = "branch$m\_$r";
-						my $st_obj  = new STATE($st_name, 'I', $BRANCH, 1);
-						push (@states, $st_obj);
-					}
+				# Intron Body States before and after Branch Motif
+				my @in_branch = qw(branch_i0 branch_i1 branch_i2);
+				foreach my $st (@in_branch) {
+					my $st_name = $st . "_$c";
+					my $obj = new STATE($st_name, 'I', $INTRON, 1);
+					push(@states, $obj);
+				}
+			
+				# Branch Motif States
+				for (my $m=0; $m < length($MOTIF); $m++) {
+					my $st_name = "branch$m\_$c";
+					my $st_obj  = new STATE($st_name, 'I', $BRANCH, 1);
+					push (@states, $st_obj);
 				}
 			} elsif ($name =~ /i/ and $BRANCH =~ /^NO$/) {
 				my $st_obj = new STATE($name, $st_label[$i], $order, $st_length);
@@ -162,7 +160,7 @@ for (my $i=0; $i < @st_quant; $i++) {
 		}
 	}
 }
-#foreach my $obj (@states) {browse($obj);}
+foreach my $obj (@states) {browse($obj);}
 
 
 #---------------------------------#
