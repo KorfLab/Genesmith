@@ -15,11 +15,12 @@ getopts('h:b:D:A:U:E:');
 #========================================================#
 
 # DEFAULT settings [options]
-my $BRANCH  = "NO";  # Order for the branch states created by <hmmgen_branch.pl>
-my $L_DON   = 2;     # Quantity of Donor States
-my $L_ACCEP = 2;     # Quantity of Acceptor States 
-my $L_UP    = 500;   # Length of Upstream region parsed for training
-my $L_DOWN  = 500;   # Length of Downstream region parsed for training
+my $MAX_ORDER = 7;     # The Highest order of emissions to be generated
+my $BRANCH    = "NO";  # Order for the branch states created by <hmmgen_branch.pl>
+my $L_DON     = 2;     # Quantity of Donor States
+my $L_ACCEP   = 2;     # Quantity of Acceptor States 
+my $L_UP      = 500;   # Length of Upstream region parsed for training
+my $L_DOWN    = 500;   # Length of Downstream region parsed for training
 
 
 die "
@@ -55,7 +56,7 @@ if ($BRANCH  !~ /^\w+$/ or
 # OPTIONAL STATES: branch states 
 
 if ($BRANCH =~ /^Y$/) {
-	for (my $i=0; $i <= 5; $i++) {
+	for (my $i=0; $i <= $MAX_ORDER; $i++) {
 		my $cmd = "hmmgen_branch.pl ";
 		$cmd   .= "-i $i -b $i -D $L_DON -A $L_ACCEP ";
 		$cmd   .= "$GFF $FASTA";
@@ -65,7 +66,7 @@ if ($BRANCH =~ /^Y$/) {
 #------------------------------------------------------------------------------#
 
 # Generate Gene model states from order 0 - 5
-for (my $i=0; $i <= 5; $i++) {
+for (my $i=0; $i <= $MAX_ORDER; $i++) {
 	my $cmd = "hmmgen_gene.pl ";
 	$cmd   .= "-5 $i -m $i -c $i -d $i -i $i -a $i -s $i -3 $i ";
 	$cmd   .= "-D $L_DON -A $L_ACCEP -U $L_UP -E $L_DOWN ";
