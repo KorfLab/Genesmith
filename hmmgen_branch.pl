@@ -307,6 +307,40 @@ sub get_em_rows{
 			}
 		}	
 	}
+	
+	if ($order == 6) {
+		foreach my $c1 (@alph) {
+			foreach my $c2 (@alph) {
+				foreach my $c3 (@alph) {
+					foreach my $c4 (@alph) {
+						foreach my $c5 (@alph) {
+							foreach my $c6 (@alph) {
+								$em_rows{"$c1$c2$c3$c4$c5$c6"} = 1;
+							}
+						}
+					}
+				}
+			}
+		}	
+	}
+	
+	if ($order == 7) {
+		foreach my $c1 (@alph) {
+			foreach my $c2 (@alph) {
+				foreach my $c3 (@alph) {
+					foreach my $c4 (@alph) {
+						foreach my $c5 (@alph) {
+							foreach my $c6 (@alph) {
+								foreach my $c7 (@alph) {
+									$em_rows{"$c1$c2$c3$c4$c5$c6$c7"} = 1;
+								}
+							}
+						}
+					}
+				}
+			}
+		}	
+	}
 	return %em_rows;
 }
 
