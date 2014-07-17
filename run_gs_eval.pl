@@ -88,17 +88,17 @@ my ($taxa)  = $GFF =~ /\/?(\w+\.*\w+\d*)\.gff$/;
 # Get Test and Training Sets #
 #----------------------------#
 # print ">>> Creating TEST and TRAINING sets\n";
-`test_train_sets.pl $GFF $FASTA`;
+#`test_train_sets.pl $GFF $FASTA`;
 
-my $sets = 1;  # Stores Total number of Sets
-foreach my $fh (glob("./$taxa\_*")) {
-	if ($fh =~ /test/) {
-		my ($set) = $fh =~ /_test(\d+)\.\w+/;
-		$sets = $set + 1 if $set >= $sets;
-	}
-}
+# my $sets = 1;  # Stores Total number of Sets
+# foreach my $fh (glob("./$taxa\_*")) {
+# 	if ($fh =~ /test/) {
+# 		my ($set) = $fh =~ /_test(\d+)\.\w+/;
+# 		$sets = $set + 1 if $set >= $sets;
+# 	}
+# }
 # print "\t$sets sets\n\n";
-
+my $sets = 5;
 
 #-------------#
 # Create HMMs #
@@ -170,11 +170,15 @@ my $nuc_stats  = $eval_stats[1];
 my $cds_counts = $eval_stats[2];
 my $kog_counts = $eval_stats[3];
 
+my $opt_info = "> -5 $UP -m $START -c $EXON -d $DON -i $INTRON -a $ACCEP -s $STOP -3 $DOWN";
+print $opt_info,   "\n";
 print $taxa,       "\t";
 print $nuc_stats,  "\t\n";
 print $cds_counts, "\t";
 print $kog_counts, "\t\n";
 
 
-### Remove Extra Files
+### Remove Model Files
+my $model_fh = "$taxa\_train*.hmm";
+`rm $model_fh`;
 

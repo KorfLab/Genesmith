@@ -15,7 +15,7 @@ getopts('h:b:D:A:U:E:');
 #========================================================#
 
 # DEFAULT settings [options]
-my $MAX_ORDER = 7;     # The Highest order of emissions to be generated
+my $MAX_ORDER = 5;     # The Highest order of emissions to be generated
 my $BRANCH    = "NO";  # Order for the branch states created by <hmmgen_branch.pl>
 my $L_DON     = 2;     # Quantity of Donor States
 my $L_ACCEP   = 2;     # Quantity of Acceptor States 

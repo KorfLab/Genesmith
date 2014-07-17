@@ -341,6 +341,26 @@ sub get_em_rows{
 			}
 		}	
 	}
+	
+	if ($order == 8) {
+		foreach my $c1 (@alph) {
+			foreach my $c2 (@alph) {
+				foreach my $c3 (@alph) {
+					foreach my $c4 (@alph) {
+						foreach my $c5 (@alph) {
+							foreach my $c6 (@alph) {
+								foreach my $c7 (@alph) {
+									foreach my $c8 (@alph) {
+										$em_rows{"$c1$c2$c3$c4$c5$c6$c7$c8"} = 1;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}	
+	}
 	return %em_rows;
 }
 
