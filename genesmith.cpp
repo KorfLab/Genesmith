@@ -33,12 +33,10 @@ static char            *KOG_SEQ  = NULL; // KOG AA sequence
 static double           ASCALE   = 1.0;  // alignment scaling factor
 static double           PSCALE   = 1.0;  // profile scaling factor
 
-double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, size_t tb) {
-// 	std::string aa_seq = translate(mrna);
-// 	char *seq          = (char*)aa_seq.c_str();
-// 	double score       = hmmer_score(ALPHABET, PROFILE, seq);
-// 	double loc_score   = sw_score(seq, KOG_SEQ);
-	return 0.01;	
+/* FUNCTIONS */
+char* translate (const std::string *mrna) {
+	const char *seq = (char*)mrna->c_str();
+	return ik_translate(seq, 1);
 }
 
 static float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, char *seq) {
@@ -78,6 +76,17 @@ static float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, ch
 	p7_bg_Destroy(bg);
 	free(dsq);
 	
+	return score;
+}
+
+double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, size_t tb) {
+	char* aa_seq      = translate(mrna);
+	double glob_score = hmmer_score(ALPHABET, PROFILE, aa_seq);
+// 	double loc_score  = sw_mat_linear(aa_seq, KOG_SEQ, 62);
+// 	std::cout << "HMMER-score:\t" << glob_score << std::endl;
+// 	std::cout << "SW-Score:\t"    << loc_score  << std::endl;
+    double score = glob_score * PSCALE;
+	free(aa_seq);
 	return score;
 }
 
