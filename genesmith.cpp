@@ -100,6 +100,7 @@ double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, 
 	if (stop_ct == 1 and prot_seq.substr((prot_seq.length()-1), 1) == "*") {
 		filtered_ct++;
 		double glob_score = hmmer_score(ALPHABET, PROFILE, aa_seq);
+// 		double loc_score  = sw_mat_linear(aa_seq, KOG_SEQ, 62);
 		if (glob_score > 0) {
 // 			//std::cout << "nt: " << *mrna << std::endl;
 // 			printf("\naa: %s\n", aa_seq);
@@ -109,11 +110,11 @@ double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, 
 			return glob_score;
 		} else {
 			free(aa_seq);
-			return 0.1;
+			return -INFINITY;
 		}
 	} else {
 		free(aa_seq);
-		return 0.01;
+		return -INFINITY;
 	}
 	
 // 	double glob_score = hmmer_score(ALPHABET, PROFILE, aa_seq);
