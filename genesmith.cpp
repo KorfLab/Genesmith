@@ -33,13 +33,17 @@ static char            *KOG_SEQ  = NULL; // KOG AA sequence
 static double           ASCALE   = 1.0;  // alignment scaling factor
 static double           PSCALE   = 1.0;  // profile scaling factor
 
+//Cycle Count
+static int ct = 0;
+static int filtered_ct = 0;
+
 /* FUNCTIONS */
 char* translate (const std::string *mrna) {
-	const char *seq = (char*)mrna->c_str();
+	char *seq = (char*)mrna->c_str();
 	return ik_translate(seq, 1);
 }
 
-static float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, char *seq) {
+static float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, const char *aa_seq) {
 // 	char *seq = (char*)aa_seq.c_str();   // Convert string into char array
 		
 	P7_BG        *bg     = NULL; /* background */
@@ -50,8 +54,8 @@ static float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, ch
 	float         score;
 	
 	/* digitize sequence */
-	L = strlen(seq);
-	esl_abc_CreateDsq(ALPHABET, seq, &dsq);
+	L = strlen(aa_seq);
+	esl_abc_CreateDsq(ALPHABET, aa_seq, &dsq);
 	
 	/* background */
 	bg = p7_bg_Create(ALPHABET);
@@ -74,20 +78,53 @@ static float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, ch
 	p7_gmx_Destroy(mx);
 	p7_profile_Destroy(gm);
 	p7_bg_Destroy(bg);
+//	fprintf(stderr, "freeing..");
 	free(dsq);
+//	fprintf(stderr, "freed\n");
 	
 	return score;
 }
 
 double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, size_t tb) {
-	char* aa_seq      = translate(mrna);
-	double glob_score = hmmer_score(ALPHABET, PROFILE, aa_seq);
+	ct++;
+	char *aa_seq      = translate(mrna);
+	
+	std::string prot_seq = std::string(aa_seq);
+	size_t stop_ct       = 0;
+	for (size_t i=0; i < prot_seq.length(); i++) {
+		if (prot_seq.substr(i,1) == "*") {
+			stop_ct++;
+		}
+	}
+	// Filter out candidates for calculating HMMER score
+	if (stop_ct == 1 and prot_seq.substr((prot_seq.length()-1), 1) == "*") {
+		filtered_ct++;
+		double glob_score = hmmer_score(ALPHABET, PROFILE, aa_seq);
+		if (glob_score > 0) {
+// 			//std::cout << "nt: " << *mrna << std::endl;
+// 			printf("\naa: %s\n", aa_seq);
+// 			std::cout << ">HMMER-score:\t" << glob_score << "\tCurrent_Position: " << pos << "\tTraceback_Length: " << tb  << "\tStops: " << stop_ct << "\tCycle: " << ct << "\tFiltered: " << filtered_ct << std::endl;
+			
+			free(aa_seq);
+			return glob_score;
+		} else {
+			free(aa_seq);
+			return 0.1;
+		}
+	} else {
+		free(aa_seq);
+		return 0.01;
+	}
+	
+// 	double glob_score = hmmer_score(ALPHABET, PROFILE, aa_seq);
+// 	//std::cout << "nt: " << *mrna << std::endl;
+// 	printf("\naa: %s\n", aa_seq);
+// 	std::cout << ">HMMER-score:\t" << glob_score << "\tCurrent_Position: " << pos << "\tTraceback_Length: " << tb  << "\tCycle:  " << ct << std::endl;
+
 // 	double loc_score  = sw_mat_linear(aa_seq, KOG_SEQ, 62);
-// 	std::cout << "HMMER-score:\t" << glob_score << std::endl;
-// 	std::cout << "SW-Score:\t"    << loc_score  << std::endl;
-    double score = glob_score * PSCALE;
-	free(aa_seq);
-	return score;
+// 	std::cout << ">SW-score:\t" << loc_score << std::endl;
+// 	free(aa_seq);
+// 	return 0.01;
 }
 
 static void usage () {
@@ -230,7 +267,7 @@ int main (int argc, char ** argv) {
 			}
 			prev_st = st;
 		}
-		//tb.print_gff(job->getHeader());
+// 		tb.print_gff(job->getHeader());
 		job = jobs.getJob();
 		feat.clear();
 	}

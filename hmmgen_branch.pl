@@ -179,7 +179,7 @@ foreach my $obj (@states) {
 	my $order     = $obj->order;
 	my $em_counts = $obj->emission;
 	my %em_rows   = get_em_rows($order);
-	my $em_output = em_table($em_counts, \%em_rows, $order);
+	my $em_output = em_table_pseudo_ct($em_counts, \%em_rows, $order);
 	
 	for (my $i=0; $i < 3; $i++) {
 		my $st_name = $st . "_$i";
@@ -210,8 +210,8 @@ sub output_st_em {
 	return 0;
 }
 
-# Generates Table of Emissions formatted for Model File
-sub em_table{
+# Generates Table of Emissions (WITH pseudo counts) formatted for Model File
+sub em_table_pseudo_ct{
 	my ($em_counts, $em_rows, $order) = @_;
 	my @alph = qw(A C G T);
 	my $final_em = "";
@@ -243,6 +243,41 @@ sub em_table{
 	}
 	return $final_em;
 }
+
+# Generates Table of Emissions (NO pseudo counts) formatted for Model File
+sub em_table{
+	my ($em_counts, $em_rows, $order) = @_;
+	my @alph = qw(A C G T);
+	my $final_em = "";
+	
+	if ($order == 0) {
+		my $em_row = "";
+		foreach my $col (@alph) {
+			my $count = $em_counts->{$col};
+			if (defined $count) {$em_row .= "$count\t";}
+			else                {$em_row .= "0\t";}
+		}
+		chop($em_row);
+		$final_em .= "$em_row\n";
+	} else {	
+		foreach my $row (sort keys %$em_rows) {
+			my $em_row = "";
+			if (!defined $em_counts->{$row}) {
+				$em_row = "0\t0\t0\t0";
+			} else {
+				foreach my $col (@alph) {
+					my $count = $em_counts->{$row}->{$col};
+					if (defined $count) {$em_row .= "$count\t";}
+					else                {$em_row .= "0\t";}
+				}
+				chop($em_row);
+			}
+			$final_em .= "$em_row\n";
+		}
+	}
+	return $final_em;
+}
+
 
 #-------------------------------------------------------#
 # Creates Array of all kmer combinations that represent # 
