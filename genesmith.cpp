@@ -105,9 +105,8 @@ double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, 
 // 			//std::cout << "nt: " << *mrna << std::endl;
 // 			printf("\naa: %s\n", aa_seq);
 // 			std::cout << ">HMMER-score:\t" << glob_score << "\tCurrent_Position: " << pos << "\tTraceback_Length: " << tb  << "\tStops: " << stop_ct << "\tCycle: " << ct << "\tFiltered: " << filtered_ct << std::endl;
-			
 			free(aa_seq);
-			return glob_score;
+			return glob_score * PSCALE;
 		} else {
 			free(aa_seq);
 			return -INFINITY;
