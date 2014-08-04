@@ -292,7 +292,7 @@ foreach my $obj (@states) {
 	my $order     = $obj->order;
 	my $em_counts = $obj->emission;
 	my %em_rows   = get_em_rows($order);
-	my $em_output = em_table_pseudo_ct($em_counts, \%em_rows, $order);
+	my $em_output = em_table($em_counts, \%em_rows, $order);
 	
 	# Copy 3 sets of Exon & Intron states
 	if ($st =~ /cds|don|i|accep/) {

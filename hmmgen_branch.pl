@@ -179,7 +179,7 @@ foreach my $obj (@states) {
 	my $order     = $obj->order;
 	my $em_counts = $obj->emission;
 	my %em_rows   = get_em_rows($order);
-	my $em_output = em_table_pseudo_ct($em_counts, \%em_rows, $order);
+	my $em_output = em_table($em_counts, \%em_rows, $order);
 	
 	for (my $i=0; $i < 3; $i++) {
 		my $st_name = $st . "_$i";
