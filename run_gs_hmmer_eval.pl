@@ -4,49 +4,89 @@ use warnings 'FATAL' => 'all';
 use FAlite;
 use DataBrowser;
 use Getopt::Std;
-use vars qw($opt_h $opt_P $opt_S);
-getopts('h:P:S:');
+use vars qw($opt_h $opt_5 $opt_m $opt_c $opt_d $opt_i $opt_a $opt_s $opt_3 $opt_b $opt_D $opt_A $opt_U $opt_E $opt_P $opt_S);
+getopts('h:5:m:c:d:i:a:s:3:b:D:A:U:E:P:S:');
 
 #========================================#
 # Genesmith Prediction using HMMER score #
 #========================================#
-
-# Conditions for Optimal S.cerevisiae Gene Model
-my $UP      = 0;     # Order Upstream
-my $START   = 0;     # Order Start, includes canonical ATG at the end
-my $EXON    = 5;     # Order CDS, always 3 states
-my $DON     = 1;     # Order Donor, starts with canonical GT
-my $INTRON  = 5;     # Order Intron, always 3 states
-my $ACCEP   = 1;     # Order Acceptor, ends with canonical AG
-my $STOP    = 0;     # Order Stop, starts with stop codon
-my $DOWN    = 0;     # Order Downstream
-my $L_DON   = 4;     # Quantity of Donor States
-my $L_ACCEP = 3;     # Quantity of Acceptor States 
-my $L_UP    = 500;   # Length of Upstream region parsed for training
-my $L_DOWN  = 200;   # Length of Downstream region parsed for training
-
-# Default Coefficients for HMMER and SW-alignment scores
+my $UP          = 0;     # Order Upstream
+my $START       = 0;     # Order Start, includes canonical ATG at the end, length = 3 + order
+my $EXON        = 0;     # Order CDS, always 3 states
+my $DON         = 0;     # Order Donor, starts with canonical GT, length = 2 + order
+my $INTRON      = 0;     # Order Intron, always 3 states
+my $ACCEP       = 0;     # Order Acceptor, ends with canonical AG, length = 2 + order
+my $STOP        = 0;     # Order Stop, starts with stop codon, length = 3 + order
+my $DOWN        = 0;     # Order Downstream
+my $BRANCH      = "NO";  # Order for the branch states created by <hmmgen_branch.pl>
+my $L_DON       = 2;     # Quantity of Donor States
+my $L_ACCEP     = 2;     # Quantity of Acceptor States 
+my $L_UP        = 500;   # Length of Upstream region parsed for training
+my $L_DOWN      = 500;   # Length of Downstream region parsed for training
 my $HMMER_COEFF = 1.0;
 my $SW_COEFF    = 1.0;
+
 
 die "
 usage: $0 [options] <GFF> <FASTA>
 
-parameters:
-   -P <digit>  fractional coefficient for HMMER          Default = $HMMER_COEFF
-   -S <digit>  fractional coefficient for SW-alignment   Default = $SW_COEFF
-   -h          help (format and details)
+universal parameters:
+  -5 <order>   upstream state info                        Default = $UP
+  -m <order>   start codon state info                     Default = $START
+  -c <order>   coding state info                          Default = $EXON
+  -d <order>   donor site state info                      Default = $DON
+  -i <order>   intron body state info                     Default = $INTRON
+  -a <order>   acceptor site state info                   Default = $ACCEP
+  -s <order>   stop codon state info                      Default = $STOP
+  -3 <order>   downstream state info                      Default = $DOWN
+  -b <string>  OPTIONAL branch states, enter 'Y' for use  Default = $BRANCH
+  -D <length>  Donor Site Length                          Default = $L_DON
+  -A <length>  Acceptor Site Length                       Default = $L_ACCEP
+  -U <length>  upstream training                          Default = $L_UP
+  -E <length>  downtream training                         Default = $L_DOWN
+  -P <digit>   fractional coefficient for HMMER           Default = $HMMER_COEFF
+  -S <digit>   fractional coefficient for SW-alignment    Default = $SW_COEFF
+  -h           help (format and details)
 " unless @ARGV == 2;
 
+$UP	         = $opt_5 if $opt_5;
+$START       = $opt_m if $opt_m;
+$EXON        = $opt_c if $opt_c;
+$DON         = $opt_d if $opt_d;
+$INTRON      = $opt_i if $opt_i;
+$ACCEP       = $opt_a if $opt_a;
+$STOP        = $opt_s if $opt_s;
+$DOWN        = $opt_3 if $opt_3;
+$BRANCH      = $opt_b if $opt_b;
+$L_DON       = $opt_D if $opt_D;
+$L_ACCEP     = $opt_A if $opt_A;
+$L_UP        = $opt_U if $opt_U;
+$L_DOWN      = $opt_E if $opt_E;
 $HMMER_COEFF = $opt_P if $opt_P;
 $SW_COEFF    = $opt_S if $opt_S;
 
 my ($GFF, $FASTA) = @ARGV;
 
-# Sanity Check
-if ($HMMER_COEFF !~ /\d?.?\d+/ or $SW_COEFF !~ /\d?.?\d+/) {
+# Sanity Check - options
+if ($START       !~ /^\d+$/    or
+    $DON         !~ /^\d+$/    or 
+    $ACCEP       !~ /^\d+$/    or
+    $STOP        !~ /^\d+$/    or
+    $UP          !~ /^\d+$/    or
+    $EXON        !~ /^\d+$/    or
+    $INTRON      !~ /^\d+$/    or
+    $DOWN        !~ /^\d+$/    or
+    ($BRANCH     !~ /^NO$/  and $BRANCH !~ /^Y$/) or
+    $L_DON       !~ /^\d+$/    or
+    $L_ACCEP     !~ /^\d+$/    or    
+    $L_UP        !~ /^\d+$/    or
+    $L_DOWN      !~ /^\d+$/    or
+    $HMMER_COEFF !~ /\d?.?\d+/ or
+    $SW_COEFF    !~ /\d?.?\d+/   ) {
     die "Invalid input [options]\n";
 }
+# OPTIONAL states
+if ($BRANCH !~ /^Y$/ and $BRANCH !~ /^NO$/) {die "Invalid BRANCH input [options]\n";}
 
 # Get Training set Filename without File handle
 my ($taxa)  = $GFF =~ /\/?(\w+\.*\w+\d*)\.gff$/;
@@ -72,7 +112,7 @@ my $sets = 5;
 # Create HMMs #
 #-------------#
 my $PATH   = "./HMM/";
-print ">>> Generating HMMs\n";
+# print ">>> Generating HMMs\n";
 for (my $i=0; $i < $sets; $i++) {
 	my $file = "$taxa\_train$i";
 	my $em_path = $PATH . $file . "/";
@@ -84,9 +124,9 @@ for (my $i=0; $i < $sets; $i++) {
 		$cmd   .= " -D $L_DON -A $L_ACCEP -U $L_UP -E $L_DOWN";
 		$cmd   .= " $gff_fh $fa_fh";
 		`$cmd`;
-		print "\t$em_path\tDIRECTORY CREATED\n";
+# 		print "\t$em_path\tDIRECTORY CREATED\n";
 	} else {
-		print "\t$em_path\tDIRECTORY EXISTS\n";
+# 		print "\t$em_path\tDIRECTORY EXISTS\n";
 	}
 
 	my $cmd = "hmm_assmbl.pl";
@@ -94,14 +134,14 @@ for (my $i=0; $i < $sets; $i++) {
 	$cmd   .= " -5 $UP -m $START -c $EXON -d $DON -i $INTRON -a $ACCEP -s $STOP";
 	$cmd   .= " $gff_fh $fa_fh";
 	`$cmd`;
-	print "\t$cmd\n\n";
+# 	print "\t$cmd\n\n";
 }
 
 
 #-------------------#
 # Running Genesmith #
 #-------------------#
-print "\n>>> Running Genesmith\n";
+# print "\n>>> Running Genesmith\n";
 my $output_fh = "$taxa\_pred.gff";
 my $exp_fa    = "$taxa\_exp.fa";
 my $exp_gff   = "$taxa\_exp.gff";
@@ -131,13 +171,13 @@ foreach my $fh (glob("./$taxa\_*\.hmm")) {
 	}
 	`cat $test_fa  >> $exp_fa`;
 	`cat $test_gff >> $exp_gff`;
-	print "\tset:  ", $set, "\n";
+# 	print "\tset:  ", $set, "\n";
 }
 
 #----------------------------#
 # Evaluate Gene Predications #
 #----------------------------#
-print "\n>>> Evaluate Predictions\n";
+# print "\n>>> Evaluate Predictions\n";
 my $results = `evaluator.pl $exp_fa $exp_gff $output_fh`;
 chomp($results);
 
