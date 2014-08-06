@@ -82,8 +82,8 @@ static float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, co
 }
 
 double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, size_t tb) {
-	char *aa_seq      = translate(mrna);
-	double glob_score = hmmer_score(ALPHABET, PROFILE, aa_seq);
+// 	char *aa_seq      = translate(mrna);
+// 	double glob_score = hmmer_score(ALPHABET, PROFILE, aa_seq);
 // 	double loc_score  = sw_mat_linear(aa_seq, KOG_SEQ, 62);
 // 	std::cout << "nt: " << *mrna << std::endl;
 // 	printf("\naa: %s\n", aa_seq);
@@ -105,9 +105,9 @@ double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, 
 // 		return -INFINITY;
 // 	}
 	
-	free(aa_seq);
-	return glob_score;
-// 	return 0.01;
+// 	free(aa_seq);
+// 	return glob_score;
+	return 0.01;
 }
 
 static void usage () {
