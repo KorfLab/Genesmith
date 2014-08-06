@@ -187,7 +187,7 @@ my $nuc_stats  = $eval_stats[1];
 my $cds_counts = $eval_stats[2];
 my $kog_counts = $eval_stats[3];
 
-my $opt_info = "> -5 $UP -m $START -c $EXON -d $DON -i $INTRON -a $ACCEP -s $STOP -3 $DOWN";
+my $opt_info = "> -U $L_UP -E $L_DOWN -D $L_DON -A $L_ACCEP -5 $UP -m $START -c $EXON -d $DON -i $INTRON -a $ACCEP -s $STOP -3 $DOWN";
 print $opt_info,   "\n";
 print $taxa,       "\t";
 print $nuc_stats,  "\t\n";
