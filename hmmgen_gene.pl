@@ -5,8 +5,8 @@ use STATE;
 use HMMstar;
 use DataBrowser;
 use Getopt::Std;
-use vars qw($opt_h $opt_5 $opt_m $opt_c $opt_d $opt_i $opt_a $opt_s $opt_3 $opt_D $opt_A $opt_U $opt_E);
-getopts('h:5:m:c:d:i:a:s:3:D:A:U:E:');
+use vars qw($opt_h $opt_1 $opt_5 $opt_m $opt_c $opt_d $opt_i $opt_a $opt_s $opt_3 $opt_D $opt_A $opt_U $opt_E);
+getopts('h15:m:c:d:i:a:s:3:D:A:U:E:');
 
 
 # DEFAULT settings [options]
@@ -74,6 +74,13 @@ if ($START   !~ /^\d+$/ or
     die "Invalid input [options]\n";
 }
 
+# CDS state info for STANDARD Model
+my $cds_name  = 'cds';
+my $cds_quant = 3;
+# If [-1] option selected adjust CDS state info for BASIC Model
+###### Change all code necessary to implement BASIC model #######
+$cds_name  = 'CDS' if $opt_1;
+$cds_quant = 1     if $opt_1;
 
 # Info for each Group of States
 my @st_order  = ($UP,  $START,  $EXON, $DON,  $INTRON, $ACCEP,  $STOP,  $DOWN);
