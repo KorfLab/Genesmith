@@ -118,9 +118,10 @@ foreach my $contig ($genome->contigs) {
 		chop($upstream);                                    # start_site starts at A of ATG
 		$gene_struc{$id}{'Upstream'} = uc($upstream);
 		
-		# Exons
+		# Exons & CDS
 		foreach my $exon ($cds->exons) {
 			$gene_struc{$id}{'CDS'} .= uc($exon->sequence);
+			push @{$gene_struc{$id}{'Exons'}}, uc($exon->sequence);
 		}
 		
 		# Introns
@@ -152,8 +153,7 @@ foreach my $id (keys %gene_struc) {
 		
 		# Upstream
 		if ($st =~ /^GU/) {
-			my $seq = $upstream;
-			$states[$s]->emission($st, $order, $seq);
+			$states[$s]->emission($st, $order, $upstream);
 		}
 		
 		# Start
@@ -169,9 +169,12 @@ foreach my $id (keys %gene_struc) {
 		
 		# Donor
 		if ($st =~ /^don/) {
+			my $count = 0;
 			foreach my $intron (@{$gene_struc{$id}{'Introns'}}) {
-				my $seq = substr($intron, 0, $L_DON);
+				my $exon = $gene_struc{$id}{'Exons'}[$count];
+				my $seq  = substr($exon, -$order, $order) . substr($intron, 0, $L_DON);
 				$states[$s]->emission($st, $order, $seq);
+				$count++;
 			}
 		}
 		
@@ -199,7 +202,6 @@ foreach my $id (keys %gene_struc) {
 		
 		# Downstream
 		if ($st =~ /^GD/) {
-			my $seq = "";
 			$states[$s]->emission($st, $order, $downstream);
 		}
 	}
