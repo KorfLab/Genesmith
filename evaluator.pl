@@ -35,7 +35,7 @@ foreach my $id (keys %$exp) {
 		my $exp_start = $exp->{$id}->[$i]->[0];
 		my $exp_end   = $exp->{$id}->[$i]->[-1];
 		my $exp_len   = ($exp_end - $exp_start) + 1;
-		substr($lb_exp, $exp_start, $exp_len) = "1" x $exp_len;
+		substr($lb_exp, $exp_start - 1, $exp_len) = "1" x $exp_len;
 	}
 	
 	if ($cds_obs > 0) {
@@ -43,7 +43,7 @@ foreach my $id (keys %$exp) {
 			my $obs_start = $obs->{$id}->[$i]->[0];
 			my $obs_end   = $obs->{$id}->[$i]->[-1];
 			my $obs_len = ($obs_end - $obs_start) + 1;
-			substr($lb_obs, $obs_start, $obs_len) = "1" x $obs_len;
+			substr($lb_obs, $obs_start - 1, $obs_len) = "1" x $obs_len;
 		}
 	}
 	
@@ -178,30 +178,41 @@ sub bp_eval{
 sub cds_eval{
 	my ($id, $lb_exp, $lb_obs, $cds_obs, $exp, $obs) = @_;
 	my $cds_exp = scalar(@{$exp->{$id}});      # Expected quantity of CDS
+	my $first_cds = $exp->{$id}->[0]->[0];     # Start position of First CDS seq
+	my $last_cds  = $exp->{$id}->[-1]->[0];    # Start position of Last CDS seq
 	my %counts;
+	
+	#print $id, "\tEXP:  ", $cds_exp, "\tOBS:  ", scalar(@{$obs->{$id}}) 
 	
 	for(my $i = 0; $i < $cds_exp; $i++) {
 		if ($cds_obs == 0) {
-			$counts{MISSING} += $cds_exp;
+			$counts{MISSING}++;
 	    } else {
-	    	my $exp_start = $exp->{$id}->[$i]->[0];
-			my $exp_end   = $exp->{$id}->[$i]->[-1];
-			my $exp_len   = $exp_end - $exp_start;
+	    	my $exp_start;
+	    	my $exp_end;
+	    	if ($last_cds >= $first_cds) {
+	    		$exp_start = $exp->{$id}->[$i]->[0];
+	    		$exp_end   = $exp->{$id}->[$i]->[-1];
+	    	} else {
+	    		$exp_start = $exp->{$id}->[-1 - $i]->[0];
+	    		$exp_end   = $exp->{$id}->[-1 - $i]->[-1];
+	    	}
+			my $exp_len   = ($exp_end - $exp_start) + 1;
 			my $obs_start = $obs->{$id}->[$i]->[0];
 			my $obs_end   = $obs->{$id}->[$i]->[-1];
 			my $obs_len;
 			
 			if (defined $obs_start and defined $obs_end) {
-				$obs_len   = $obs_end - $obs_start;
+				$obs_len   = ($obs_end - $obs_start) + 1;
 			} else {
 				$obs_start = "NA";
 				$obs_end   = "NA";
 				$obs_len   = "NA";
 			}
-			my $exp_seq = substr($lb_exp, $exp_start, $exp_len);
+			my $exp_seq = substr($lb_exp, $exp_start - 1, $exp_len);
 			my $obs_seq = "NA";
-			$obs_seq = substr($lb_obs, $obs_start, $obs_len) if $obs_len !~ /NA/;
-			
+			$obs_seq = substr($lb_obs, $obs_start - 1, $obs_len) if $obs_len !~ /NA/;
+						
 			if (($exp_seq   eq $obs_seq)   and 
 			    ($exp_start == $obs_start) and 
 			    ($exp_len   == $obs_len))          {$counts{MATCH}++;}  

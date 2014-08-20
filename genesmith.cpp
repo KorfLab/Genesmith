@@ -32,6 +32,7 @@ static P7_HMM          *PROFILE  = NULL; // Profile for HMMER
 static char            *KOG_SEQ  = NULL; // KOG AA sequence
 static double           ASCALE   = 1.0;  // alignment scaling factor
 static double           PSCALE   = 1.0;  // profile scaling factor
+static long           FCOUNT   = 0;
 
 /* FUNCTIONS */
 char* translate (const std::string *mrna) {
@@ -82,32 +83,28 @@ static float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, co
 }
 
 double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, size_t tb) {
-// 	char *aa_seq      = translate(mrna);
-// 	double glob_score = hmmer_score(ALPHABET, PROFILE, aa_seq);
-// 	double loc_score  = sw_mat_linear(aa_seq, KOG_SEQ, 62);
-// 	std::cout << "nt: " << *mrna << std::endl;
-// 	printf("\naa: %s\n", aa_seq);
-// 	std::cout << ">HMMER-score:\t" << glob_score  << "\tSW-score:\t" << loc_score << "\tCurrent_Position: " << pos << "\tTraceback_Length: " << tb << std::endl;
-
-	// Filtering out low HMMER/SW-alignment scores
-// 	if (glob_score > 0) {
-// 		free(aa_seq);
-// 		return glob_score * PSCALE;
-// 	} else {
-// 		free(aa_seq);
-// 		return -INFINITY;
-// 	}
-// 	if (loc_score > 0) {
-// 		free(aa_seq);
-// 		return loc_score * ASCALE;
-// 	} else {
-// 		free(aa_seq);
-// 		return -INFINITY;
-// 	}
+	if (FCOUNT++ % 1000 == 1) fprintf(stderr, ".");
 	
-// 	free(aa_seq);
-// 	return glob_score;
-	return 0.01;
+	if (PROFILE != NULL or KOG_SEQ != NULL) {
+		char *aa_seq = translate(mrna);
+		for (int i = 0; i < strlen(aa_seq) -1; i++) {
+			if (aa_seq[i] == '*') {
+				printf("%s\n", aa_seq);
+				exit(1);
+			}
+		}
+		double score = 0;
+		if (PROFILE != NULL) {
+			score += PSCALE * hmmer_score(ALPHABET, PROFILE, aa_seq);
+		}
+		if (KOG_SEQ != NULL) {
+			score += ASCALE * sw_mat_linear(aa_seq, KOG_SEQ, 62);
+		}
+		free(aa_seq);
+		return score;
+	} else {
+		return 0;
+	}
 }
 
 static void usage () {
@@ -260,6 +257,8 @@ int main (int argc, char ** argv) {
 	}
 	esl_alphabet_Destroy(ALPHABET);
 	return 0;
+	
+	printf("%d tb_eval functions called\n", FCOUNT);
 }
 
 

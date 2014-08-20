@@ -79,7 +79,7 @@ if ($START   !~ /^\d+$/ or
 my @st_order  = ($UP,  $START,  $EXON, $DON,  $INTRON, $ACCEP,  $STOP,  $DOWN);
 my @st_name   = ('GU', 'start', 'cds', 'don', 'i',     'accep', 'stop', 'GD');
 my @st_label  = ('U',  'C',     'C',   'I',   'I',     'I',     'C',    'D');
-my @st_quant  = ( 1,    3,       1,    $L_DON, 1,      $L_ACCEP, 3,      1);
+my @st_quant  = ( 1,    3,       3,    $L_DON, 1,      $L_ACCEP, 3,      1);
 
 
 #---------------------------------------------------------#
@@ -114,25 +114,20 @@ foreach my $contig ($genome->contigs) {
 		my $in_count  = 1;
 		
 		# Upstream
-		my $upstream = $cds->start_site->sequence($L_UP,0); # substr based on lengths -> (upstream, downstream)
+		my $upstream = $cds->start_site->sequence($L_UP, 0); # substr based on lengths -> (upstream, downstream)
 		chop($upstream);                                    # start_site starts at A of ATG
 		$gene_struc{$id}{'Upstream'} = uc($upstream);
 		
 		# Exons
 		foreach my $exon ($cds->exons) {
-			$gene_struc{$id}{'Exons'}{$ex_count} = uc($exon->sequence);
-			$gene_struc{$id}{'ex_total'}         = $ex_count;
-			$ex_count++;
+			$gene_struc{$id}{'CDS'} .= uc($exon->sequence);
 		}
+		
 		# Introns
 		foreach my $intron ($cds->introns) {
-			# some KOGs only have 1 CDS and no Introns
-			if (defined $intron->sequence) {
-				$gene_struc{$id}{'Introns'}{$in_count} = uc($intron->sequence);
-				$gene_struc{$id}{'in_total'}		   = $in_count;
-				$in_count++;
-			}
+			push @{$gene_struc{$id}{'Introns'}}, uc($intron->sequence);
 		}
+		
 		# Downstream 
 		my $downstream = $cds->stop_site->sequence(0, $L_DOWN + 2);
 		$downstream    = substr($downstream, 3, length($downstream) - 3);
@@ -140,19 +135,15 @@ foreach my $contig ($genome->contigs) {
 	}
 }
 
-
 #--------------------------------#
 # Generate State Emission Counts #
 #--------------------------------#
 my %warnings;   # contains IDs of genes with insufficient lengths
 
 foreach my $id (keys %gene_struc) {
-	my $ex_max     = $gene_struc{$id}{'ex_total'};       # Total exons
-	my $in_max     = $gene_struc{$id}{'in_total'};       # Total introns
+	my $CDS = substr($gene_struc{$id}{'CDS'}, 0, length($gene_struc{$id}{'CDS'}) -3);
 	my $upstream   = $gene_struc{$id}{'Upstream'};       # Upstream sequence
 	my $downstream = $gene_struc{$id}{'Downstream'};     # Downstream sequence
-	my $first_ex   = $gene_struc{$id}{'Exons'}{1};       # First exon sequence
-	my $last_ex    = $gene_struc{$id}{'Exons'}{$ex_max}; # Last exon sequence
 	
 	for (my $s=0; $s < @states; $s++) {
 		my $st        = $states[$s]->name;
@@ -160,107 +151,56 @@ foreach my $id (keys %gene_struc) {
 		my $st_length = $states[$s]->st_length;
 		
 		# Upstream
-		if ($st =~ /GU/) {
+		if ($st =~ /^GU/) {
 			my $seq = $upstream;
 			$states[$s]->emission($st, $order, $seq);
 		}
 		
-		# One CDS or more
-		if ($ex_max == 1) {
-			my $seq = "";
-			if ($st =~ /start\d+$/) {
-				$seq  = substr($upstream, -$order, $order);
-				$seq .= substr($first_ex, 0, 3);
+		# Start
+		if ($st =~ /^start\d+$/) {
+			my $seq = substr($upstream, -$order) . substr($CDS, 0, 3);
+			$states[$s]->emission($st, $order, $seq);
+		}
+		
+		# CDS
+		if ($st =~ /^cds/) {
+			$states[$s]->emission($st, $order, $CDS);
+		}
+		
+		# Donor
+		if ($st =~ /^don/) {
+			foreach my $intron (@{$gene_struc{$id}{'Introns'}}) {
+				my $seq = substr($intron, 0, $L_DON);
 				$states[$s]->emission($st, $order, $seq);
-			} elsif ($st =~ /cds\d+$/) {
-				my $start = substr($first_ex, 0, 3);
-				$seq     .= substr($upstream, -($order - 3), $order - 3) if $order > 3;
-				$seq     .= $start                                       if $order >= 3; 
-				$seq     .= substr($start, -$order, $order)              if $order < 3; 
-				$seq     .= substr($first_ex, 3, length($first_ex) - 6);
-				$states[$s]->emission($st, $order, $seq);
-			} elsif ($st =~ /stop/) {
-				if (length($first_ex) < $st_length) {
-					$warnings{'short_exon'}{$id}++;
-				} else {
-					$seq .= substr($first_ex, -$st_length, $st_length);
-					$states[$s]->emission($st, $order, $seq);
-				}
-			}
-		} else {
-			# Start
-			if ($st =~ /start\d+$/) {
-				my $seq = "";
-				$seq   .= substr($upstream, -$order, $order);
-				$seq   .= substr($first_ex, 0, 3);
-				$states[$s]->emission($st, $order, $seq);
-			}
-			# Exon Body
-			if ($st =~ /cds\d+$/) {
-				for (my $i=1; $i <= $ex_max; $i++) {
-					my $seq = "";
-					if ($i == 1) {
-						my $start = substr($first_ex, 0, 3);
-						$seq     .= substr($upstream, -($order - 3), $order - 3) if $order > 3;
-						$seq     .= $start                                       if $order >= 3; 
-						$seq     .= substr($start, -$order, $order)              if $order < 3; 
-						$seq     .= substr($first_ex, 3, length($first_ex)-3);
-						$states[$s]->emission($st, $order, $seq);
-					} elsif ($i == $ex_max) {
-						my $last_in = $gene_struc{$id}{'Introns'}{$i-1};
-						$seq       .= substr($last_in, -$order, $order);
-						$seq       .= substr($last_ex, 0, length($last_ex) - 3);
-						$states[$s]->emission($st, $order, $seq);
-					} else {
-						my $exon   = $gene_struc{$id}{'Exons'}{$i};
-						my $intron = $gene_struc{$id}{'Introns'}{$i-1};
-						$seq      .= substr($intron, -$order, $order);
-						$seq      .= $exon;
-						$states[$s]->emission($st, $order, $seq);
-					}
-				}
-			}
-			# Intron
-			if ($st =~ /don|accep|i/) {
-				for (my $i=1; $i <= $in_max; $i++) {
-					my $seq    = "";
-					my $exon   = $gene_struc{$id}{'Exons'}{$i};
-					my $intron = $gene_struc{$id}{'Introns'}{$i};
-					my $don    = substr($intron, 0, $L_DON);
-					my $accep  = substr($intron, -$L_ACCEP, $L_ACCEP);
-					my $in_len = length($intron) - ($L_DON + $L_ACCEP);  # Length of Intron Body
-					
-					if ($st =~ /don/) {
-						$seq .= substr($exon, -$order, $order);
-						$seq .= $don;
-						$states[$s]->emission($st, $order, $seq);
-					} elsif ($st =~ /i/) {
-						my $prev_seq = $exon . $don;
-						$seq .= substr($prev_seq, -$order, $order);
-						$seq .= substr($intron, $L_DON, $in_len);
-						$states[$s]->emission($st, $order, $seq);
-					} elsif ($st =~ /accep/) {
-						$seq .= substr($intron, -$st_length, $st_length);
-						$states[$s]->emission($st, $order, $seq);
-					}
-				}
-			}
-			# Stop
-			if ($st =~ /stop/) {
-				if (length($last_ex) < $st_length) {
-					$warnings{'short_exon'}{$id}++;
-				} else {
-					my $seq = substr($last_ex, -$st_length, $st_length);
-					$states[$s]->emission($st, $order, $seq);
-				}
 			}
 		}
-		# Downstream
-		if ($st =~ /GD/) {
-			my $seq = "";
-			$seq   .= substr($last_ex, -$order, $order);
-			$seq   .= $downstream;
+		
+		# Acceptor
+		if ($st =~ /^accep/) {
+			foreach my $intron (@{$gene_struc{$id}{'Introns'}}) {
+				my $seq = substr($intron, -$st_length, $st_length);
+				$states[$s]->emission($st, $order, $seq);
+			}
+		}
+		
+		# Intron body
+		if ($st =~ /^i/) {
+			foreach my $intron (@{$gene_struc{$id}{'Introns'}}) {
+				my $seq = substr($intron, $L_DON, length($intron) - ($L_DON + $L_ACCEP));
+				$states[$s]->emission($st, $order, $seq);
+			}
+		}
+		
+		# Stop
+		if ($st =~ /^stop/) {
+			my $seq = substr($CDS, -$st_length, $st_length);
 			$states[$s]->emission($st, $order, $seq);
+		}
+		
+		# Downstream
+		if ($st =~ /^GD/) {
+			my $seq = "";
+			$states[$s]->emission($st, $order, $downstream);
 		}
 	}
 }
@@ -295,9 +235,9 @@ foreach my $obj (@states) {
 	my $em_output = em_table($em_counts, \%em_rows, $order);
 	
 	# Copy 3 sets of Exon & Intron states
-	if ($st =~ /cds|don|i|accep/) {
+	if ($st =~ /don|i|accep/) {
 		for (my $i=0; $i < 3; $i++) {
-			if ($st =~ /cds|i/) {
+			if ($st =~ /i/) {
 				my ($st_name) = $st =~ /(\w+)\d+$/;
 				$st_name     .= "$i";
 				$st_name     .= "-" . $label ."-" . $order . ".txt";

@@ -66,6 +66,20 @@ sub emission{
 		} else {
 			$self->{emission}->{$nt}++;
 		}
+	} elsif ($st =~ /cds\d/) {
+		my ($phase) = $st =~ /cds(\d)/;
+		for (my $i = $phase; $i < (length($seq)/3); $i+=3) {
+			if ($i >= $order) {
+				my $ctx = uc substr($seq, $i - $order, $order);
+				my $nt = uc substr($seq, $i, 1);
+				next unless $nt =~ /[ACGT]/;
+				if ($ctx =~ /\S+/) {
+					$self->{emission}->{$ctx}->{$nt}++;
+				} else {
+					$self->{emission}->{$nt}++;
+				}
+			}
+		}
 	} else {
 		for (my $i = $order; $i < length($seq); $i++) {
 			my $ctx = uc substr($seq, $i - $order, $order);
