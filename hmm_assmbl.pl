@@ -5,8 +5,8 @@ use STATE;
 use HMMstar;
 use DataBrowser;
 use Getopt::Std;
-use vars qw($opt_h $opt_5 $opt_m $opt_c $opt_d $opt_i $opt_a $opt_s $opt_3 $opt_b $opt_D $opt_A $opt_U $opt_E);
-getopts('h:5:m:c:d:i:a:s:3:b:D:A:U:E:');
+use vars qw($opt_h $opt_5 $opt_m $opt_c $opt_d $opt_i $opt_a $opt_s $opt_3 $opt_b $opt_B $opt_D $opt_A $opt_U $opt_E);
+getopts('h:5:m:c:d:i:a:s:3:b:B:D:A:U:E:');
 
 # Change options to use Getopt::Long to allow an input of 0 for branch and polyA options
 # DEFAULT settings [options]
@@ -18,6 +18,7 @@ my $INTRON  = 0;     # Order Intron, always 3 states
 my $ACCEP   = 0;     # Order Acceptor, ends with canonical AG, length = 2 + order
 my $STOP    = 0;     # Order Stop, starts with stop codon, length = 3 + order
 my $DOWN    = 0;     # Order Downstream
+my $B_ORDER = 0;     # Order of Branch Motif States
 my $BRANCH  = "NO";  # Order for the branch states created by <hmmgen_branch.pl>
 my $L_DON   = 2;     # Quantity of Donor States
 my $L_ACCEP = 2;     # Quantity of Acceptor States 
@@ -36,7 +37,8 @@ universal parameters:
   -a <order>   acceptor site state info                   Default = $ACCEP
   -s <order>   stop codon state info                      Default = $STOP
   -3 <order>   downstream state info                      Default = $DOWN
-  -b <string>  OPTIONAL branch states, enter 'Y' for use  Default = $BRANCH
+  -b <order>   branch motif state info                    Default = $B_ORDER
+  -B <string>  OPTIONAL branch states, enter 'Y' for use  Default = $BRANCH
   -D <length>  Donor Site Length                          Default = $L_DON
   -A <length>  Acceptor Site Length                       Default = $L_ACCEP
   -U <length>  upstream training                          Default = $L_UP
@@ -52,7 +54,8 @@ $INTRON  = $opt_i if $opt_i;
 $ACCEP   = $opt_a if $opt_a;
 $STOP    = $opt_s if $opt_s;
 $DOWN    = $opt_3 if $opt_3;
-$BRANCH  = $opt_b if $opt_b;
+$B_ORDER = $opt_b if $opt_b;
+$BRANCH  = $opt_B if $opt_B;
 $L_DON   = $opt_D if $opt_D;
 $L_ACCEP = $opt_A if $opt_A;
 $L_UP    = $opt_U if $opt_U;
@@ -69,6 +72,7 @@ if ($START   !~ /^\d+$/ or
     $EXON    !~ /^\d+$/ or
     $INTRON  !~ /^\d+$/ or
     $DOWN    !~ /^\d+$/ or
+    $B_ORDER !~ /^\d+$/ or
     ($BRANCH !~ /^NO$/  and $BRANCH !~ /^Y$/) or
     $L_DON   !~ /^\d+$/ or
     $L_ACCEP !~ /^\d+$/ or    
@@ -78,7 +82,7 @@ if ($START   !~ /^\d+$/ or
 }
 
 # OPTIONAL states
-if ($BRANCH =~ /^Y$/)   {$BRANCH = $DON;}  # set order of branch/polya motif states 
+if ($BRANCH =~ /^Y$/)   {$BRANCH = $B_ORDER;}  # set order of branch/polya motif states 
 my $MOTIF = "TACTAAC";
 
 # PATH of trained State Emissions
@@ -480,7 +484,7 @@ for (my $i=0; $i < @states; $i++) {
 #-------------------#
 my $DATE      = `date`; chomp($DATE);
 my $ST_COUNT  = scalar(@states);
-my $TRACEBACK = "[FUNCTION:	HMMER	TRACK:	SEQ	COMBINE_LABEL:	C	TO_LABEL:	U]";
+my $TRACEBACK = "[FUNCTION:	TRANSLATE	TRACK:	SEQ	COMBINE_LABEL:	C	TO_LABEL:	U]";
 my $FH        = $result_dir . "_$ST_COUNT" . ".hmm";
 
 open(OUT, ">$FH") or die "Could not write into OUT\n";

@@ -191,7 +191,7 @@ int main (int argc, char ** argv) {
 	StochHMM::StateFuncs my_trans;
 	StochHMM::model hmm;
 	StochHMM::seqTracks jobs;
-	my_trans.assignTransitionFunction("HMMER", *tb_eval);
+	my_trans.assignTransitionFunction("TRANSLATE", *tb_eval);
 	hmm.import(hmm_file, &my_trans);
 	jobs.loadSeqs(hmm, seq_file);
 	StochHMM::seqJob *job=jobs.getJob();
