@@ -83,7 +83,7 @@ static float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, co
 }
 
 double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, size_t tb) {
-	if (FCOUNT++ % 1000 == 1) fprintf(stderr, ".");
+// 	if (FCOUNT++ % 1000 == 1) fprintf(stderr, ".");
 	
 	if (PROFILE != NULL or KOG_SEQ != NULL) {
 		char *aa_seq = translate(mrna);
@@ -258,7 +258,7 @@ int main (int argc, char ** argv) {
 	esl_alphabet_Destroy(ALPHABET);
 	return 0;
 	
-	printf("%d tb_eval functions called\n", FCOUNT);
+// 	printf("%d tb_eval functions called\n", FCOUNT);
 }
 
 
