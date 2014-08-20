@@ -6,7 +6,7 @@ use HMMstar;
 use DataBrowser;
 use Getopt::Std;
 use vars qw($opt_h $opt_5 $opt_m $opt_c $opt_d $opt_i $opt_a $opt_s $opt_3 $opt_b $opt_B $opt_D $opt_A $opt_U $opt_E);
-getopts('h:5:m:c:d:i:a:s:3:b:B:D:A:U:E:');
+getopts('h:5:m:c:d:i:a:s:3:b:BD:A:U:E:');
 
 # Change options to use Getopt::Long to allow an input of 0 for branch and polyA options
 # DEFAULT settings [options]
@@ -19,7 +19,7 @@ my $ACCEP   = 0;     # Order Acceptor, ends with canonical AG, length = 2 + orde
 my $STOP    = 0;     # Order Stop, starts with stop codon, length = 3 + order
 my $DOWN    = 0;     # Order Downstream
 my $B_ORDER = 0;     # Order of Branch Motif States
-my $BRANCH  = "NO";  # Order for the branch states created by <hmmgen_branch.pl>
+my $BRANCH  = "NO";  # Order for the branch states (redefined to $B_ORDER if [-b] cmd opt is used)
 my $L_DON   = 2;     # Quantity of Donor States
 my $L_ACCEP = 2;     # Quantity of Acceptor States 
 my $L_UP    = 500;   # Length of Upstream region parsed for training
@@ -38,7 +38,7 @@ universal parameters:
   -s <order>   stop codon state info                      Default = $STOP
   -3 <order>   downstream state info                      Default = $DOWN
   -b <order>   branch motif state info                    Default = $B_ORDER
-  -B <string>  OPTIONAL branch states, enter 'Y' for use  Default = $BRANCH
+  -B           Option to include branch states
   -D <length>  Donor Site Length                          Default = $L_DON
   -A <length>  Acceptor Site Length                       Default = $L_ACCEP
   -U <length>  upstream training                          Default = $L_UP
@@ -55,7 +55,6 @@ $ACCEP   = $opt_a if $opt_a;
 $STOP    = $opt_s if $opt_s;
 $DOWN    = $opt_3 if $opt_3;
 $B_ORDER = $opt_b if $opt_b;
-$BRANCH  = $opt_B if $opt_B;
 $L_DON   = $opt_D if $opt_D;
 $L_ACCEP = $opt_A if $opt_A;
 $L_UP    = $opt_U if $opt_U;
@@ -73,7 +72,6 @@ if ($START   !~ /^\d+$/ or
     $INTRON  !~ /^\d+$/ or
     $DOWN    !~ /^\d+$/ or
     $B_ORDER !~ /^\d+$/ or
-    ($BRANCH !~ /^NO$/  and $BRANCH !~ /^Y$/) or
     $L_DON   !~ /^\d+$/ or
     $L_ACCEP !~ /^\d+$/ or    
     $L_UP    !~ /^\d+$/ or
@@ -82,7 +80,7 @@ if ($START   !~ /^\d+$/ or
 }
 
 # OPTIONAL states
-if ($BRANCH =~ /^Y$/)   {$BRANCH = $B_ORDER;}  # set order of branch/polya motif states 
+$BRANCH   = $B_ORDER if $opt_B;  # set order of branch motif states 
 my $MOTIF = "TACTAAC";
 
 # PATH of trained State Emissions
