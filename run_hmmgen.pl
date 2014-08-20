@@ -6,7 +6,7 @@ use HMMstar;
 use DataBrowser;
 use Getopt::Std;
 use vars qw($opt_b $opt_D $opt_A $opt_U $opt_E);
-getopts('h:b:D:A:U:E:');
+getopts('h:bD:A:U:E:');
 
 #========================================================#
 # PURPOSE                                                #
@@ -16,7 +16,6 @@ getopts('h:b:D:A:U:E:');
 
 # DEFAULT settings [options]
 my $MAX_ORDER = 5;     # The Highest order of emissions to be generated
-my $BRANCH    = "NO";  # Order for the branch states created by <hmmgen_branch.pl>
 my $L_DON     = 2;     # Quantity of Donor States
 my $L_ACCEP   = 2;     # Quantity of Acceptor States 
 my $L_UP      = 500;   # Length of Upstream region parsed for training
@@ -27,7 +26,7 @@ die "
 usage: $0 [options] <GFF> <FASTA>
 
 universal parameters:
-  -b <string>  OPTIONAL branch states, enter 'Y' for use  Default = $BRANCH
+  -b           Option to include branch states
   -D <length>  Donor Site Length                          Default = $L_DON
   -A <length>  Acceptor Site Length                       Default = $L_ACCEP
   -U <length>  upstream training                          Default = $L_UP
@@ -35,7 +34,6 @@ universal parameters:
   -h           help (format and details)
 " unless @ARGV == 2;
 
-$BRANCH  = $opt_b if $opt_b;
 $L_DON   = $opt_D if $opt_D;
 $L_ACCEP = $opt_A if $opt_A;
 $L_UP    = $opt_U if $opt_U;
@@ -44,8 +42,7 @@ $L_DOWN  = $opt_E if $opt_E;
 my ($GFF, $FASTA) = @ARGV;
 
 # Sanity Check - options
-if ($BRANCH  !~ /^\w+$/ or
-    $L_DON   !~ /^\d+$/ or
+if ($L_DON   !~ /^\d+$/ or
     $L_ACCEP !~ /^\d+$/ or    
     $L_UP    !~ /^\d+$/ or
     $L_DOWN  !~ /^\d+$/   ) {
@@ -55,7 +52,7 @@ if ($BRANCH  !~ /^\w+$/ or
 #------------------------------------------------------------------------------#
 # OPTIONAL STATES: branch states 
 
-if ($BRANCH =~ /^Y$/) {
+if ($opt_b) {
 	for (my $i=0; $i <= $MAX_ORDER; $i++) {
 		my $cmd = "hmmgen_branch.pl ";
 		$cmd   .= "-i $i -b $i -D $L_DON -A $L_ACCEP ";
