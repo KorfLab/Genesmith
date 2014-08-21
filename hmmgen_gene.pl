@@ -74,13 +74,13 @@ if ($START   !~ /^\d+$/ or
     die "Invalid input [options]\n";
 }
 
-# CDS state info for STANDARD Model
-my $cds_name  = 'cds';
+# State quantities for STANDARD Model
 my $cds_quant = 3;
+my $i_quant = 3;
 # If [-1] option selected adjust CDS state info for BASIC Model
 ###### Change all code necessary to implement BASIC model #######
-$cds_name  = 'CDS' if $opt_1;
 $cds_quant = 1     if $opt_1;
+
 
 # Info for each Group of States
 my @st_order  = ($UP,  $START,  $EXON, $DON,  $INTRON, $ACCEP,  $STOP,  $DOWN);
@@ -179,7 +179,7 @@ foreach my $id (keys %gene_struc) {
 			my $count = 0;
 			foreach my $intron (@{$gene_struc{$id}{'Introns'}}) {
 				my $exon = $gene_struc{$id}{'Exons'}[$count];
-				my $seq  = substr($exon, -$order, $order) . substr($intron, 0, $L_DON);
+				my $seq  = substr($exon, -$order) . substr($intron, 0, $L_DON);
 				$states[$s]->emission($st, $order, $seq);
 				$count++;
 			}
@@ -188,28 +188,34 @@ foreach my $id (keys %gene_struc) {
 		# Acceptor
 		if ($st =~ /^accep/) {
 			foreach my $intron (@{$gene_struc{$id}{'Introns'}}) {
-				my $seq = substr($intron, -$st_length, $st_length);
+				my $seq = substr($intron, -$st_length);
 				$states[$s]->emission($st, $order, $seq);
 			}
 		}
 		
 		# Intron body
 		if ($st =~ /^i/) {
+			my $count = 0;
 			foreach my $intron (@{$gene_struc{$id}{'Introns'}}) {
-				my $seq = substr($intron, $L_DON, length($intron) - ($L_DON + $L_ACCEP));
+				my $exon = $gene_struc{$id}{'Exons'}[$count];
+				my $previous_seq = $exon . substr($intron, 0, $L_DON);
+				my $seq = substr($previous_seq, -$order);  
+				$seq   .= substr($intron, $L_DON, length($intron) - ($L_DON + $L_ACCEP));
 				$states[$s]->emission($st, $order, $seq);
+				$count++;
 			}
 		}
 		
 		# Stop
 		if ($st =~ /^stop/) {
-			my $seq = substr($CDS, -$st_length, $st_length);
+			my $seq = substr($gene_struc{$id}{'CDS'}, -$st_length);
 			$states[$s]->emission($st, $order, $seq);
 		}
 		
 		# Downstream
 		if ($st =~ /^GD/) {
-			$states[$s]->emission($st, $order, $downstream);
+			my $seq = substr($gene_struc{$id}{'CDS'}, -$order) . $downstream;
+			$states[$s]->emission($st, $order, $seq);
 		}
 	}
 }

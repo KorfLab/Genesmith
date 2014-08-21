@@ -32,7 +32,7 @@ static P7_HMM          *PROFILE  = NULL; // Profile for HMMER
 static char            *KOG_SEQ  = NULL; // KOG AA sequence
 static double           ASCALE   = 1.0;  // alignment scaling factor
 static double           PSCALE   = 1.0;  // profile scaling factor
-static long           FCOUNT   = 0;
+//static long           FCOUNT   = 0;    // counts number of iterations through 'tb_eval' function
 
 /* FUNCTIONS */
 char* translate (const std::string *mrna) {
