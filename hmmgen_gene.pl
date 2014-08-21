@@ -114,6 +114,8 @@ for (my $i=0; $i < @st_quant; $i++) {
 my $genome = new HMMstar::Genome($FASTA, $GFF);
 my %gene_struc;
 
+
+
 foreach my $contig ($genome->contigs) {
 	foreach my $cds ($contig->coding_sequences) {
 		my $id        = $cds->name;
@@ -121,9 +123,9 @@ foreach my $contig ($genome->contigs) {
 		my $in_count  = 1;
 		
 		# Upstream
-		my $upstream = $cds->start_site->sequence($L_UP, 0); # substr based on lengths -> (upstream, downstream)
-		chop($upstream);                                    # start_site starts at A of ATG
-		$gene_struc{$id}{'Upstream'} = uc($upstream);
+		my $up_start = $cds->start_site->start - $L_UP;
+		$up_start = 0 if $up_start < 0;		
+		$gene_struc{$id}{'Upstream'} = uc(substr($contig->dna->sequence, $up_start, $cds->start_site->start - $up_start - 1));
 		
 		# Exons & CDS
 		foreach my $exon ($cds->exons) {
@@ -136,10 +138,12 @@ foreach my $contig ($genome->contigs) {
 			push @{$gene_struc{$id}{'Introns'}}, uc($intron->sequence);
 		}
 		
-		# Downstream 
-		my $downstream = $cds->stop_site->sequence(0, $L_DOWN + 2);
-		$downstream    = substr($downstream, 3, length($downstream) - 3);
-		$gene_struc{$id}{'Downstream'} = uc($downstream);
+		# Downstream
+		my $dn_beg = $cds->stop_site->end + 2;
+		print "$dn_beg is start of downstream\n";
+		my $dn_len = length($contig->dna->sequence) - $dn_beg +1;
+		$dn_len = $L_DOWN if $dn_len > $L_DOWN;
+		$gene_struc{$id}{'Downstream'} = uc(substr($contig->dna->sequence, $dn_beg, $dn_len));
 	}
 }
 
