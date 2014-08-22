@@ -5,8 +5,8 @@ use STATE;
 use HMMstar;
 use DataBrowser;
 use Getopt::Std;
-use vars qw($opt_h $opt_1 $opt_5 $opt_m $opt_c $opt_d $opt_i $opt_a $opt_s $opt_3 $opt_D $opt_A $opt_U $opt_E);
-getopts('h15:m:c:d:i:a:s:3:D:A:U:E:');
+use vars qw($opt_h $opt_1 $opt_S $opt_5 $opt_m $opt_c $opt_d $opt_i $opt_a $opt_s $opt_3 $opt_D $opt_A $opt_U $opt_E);
+getopts('h1S5:m:c:d:i:a:s:3:D:A:U:E:');
 
 
 # DEFAULT settings [options]
@@ -40,6 +40,8 @@ universal parameters:
   -A <length>  Acceptor Site Length                       Default = $L_ACCEP
   -U <length>  upstream training                          Default = $L_UP
   -E <length>  downtream training                         Default = $L_DOWN
+  -1           Convert for Standard to Basic HMM with 1 CDS state
+  -S           Option to exclude start and stop states from basic model
   -h           help (format and details)
 " unless @ARGV == 2;
 
@@ -70,23 +72,25 @@ if ($START   !~ /^\d+$/ or
     $L_DON   !~ /^\d+$/ or
     $L_ACCEP !~ /^\d+$/ or    
     $L_UP    !~ /^\d+$/ or
-    $L_DOWN  !~ /^\d+$/   ) {
+    $L_DOWN  !~ /^\d+$/ or 
+    $opt_S and !$opt_1    ) {
     die "Invalid input [options]\n";
 }
 
 # State quantities for STANDARD Model
+my $cds_name  = 'cds';
 my $cds_quant = 3;
-my $i_quant = 3;
 # If [-1] option selected adjust CDS state info for BASIC Model
 ###### Change all code necessary to implement BASIC model #######
+$cds_name  = 'CDS' if $opt_1;
 $cds_quant = 1     if $opt_1;
 
 
 # Info for each Group of States
-my @st_order  = ($UP,  $START,  $EXON, $DON,  $INTRON, $ACCEP,  $STOP,  $DOWN);
-my @st_name   = ('GU', 'start', 'cds', 'don', 'i',     'accep', 'stop', 'GD');
-my @st_label  = ('U',  'C',     'C',   'I',   'I',     'I',     'C',    'D');
-my @st_quant  = ( 1,    3,       3,    $L_DON, 1,      $L_ACCEP, 3,      1);
+my @st_order  = ($UP,  $START,  $EXON,      $DON,  $INTRON, $ACCEP,  $STOP,  $DOWN);
+my @st_name   = ('GU', 'start', $cds_name,  'don', 'i',     'accep', 'stop', 'GD');
+my @st_label  = ('U',  'C',     'C',        'I',   'I',     'I',     'C',    'D');
+my @st_quant  = ( 1,    3,      $cds_quant, $L_DON, 1,      $L_ACCEP, 3,      1);
 
 
 #---------------------------------------------------------#
@@ -140,7 +144,6 @@ foreach my $contig ($genome->contigs) {
 		
 		# Downstream
 		my $dn_beg = $cds->stop_site->end + 2;
-		print "$dn_beg is start of downstream\n";
 		my $dn_len = length($contig->dna->sequence) - $dn_beg +1;
 		$dn_len = $L_DOWN if $dn_len > $L_DOWN;
 		$gene_struc{$id}{'Downstream'} = uc(substr($contig->dna->sequence, $dn_beg, $dn_len));
@@ -173,9 +176,16 @@ foreach my $id (keys %gene_struc) {
 			$states[$s]->emission($st, $order, $seq);
 		}
 		
-		# CDS
-		if ($st =~ /^cds/) {
+		# 3 CDS states
+		if ($st =~ /cds/) {
 			$states[$s]->emission($st, $order, $CDS);
+		}
+		
+		# 1 CDS state
+		if ($st =~ /CDS/) {
+			my $seq = $gene_struc{$id}{'CDS'};
+			if ($opt_1 and $opt_S) {$states[$s]->emission($st, $order, $seq);}
+			if ($opt_1 and !$opt_S)  {$states[$s]->emission($st, $order, substr($seq, 3, length($seq) -6));}
 		}
 		
 		# Donor
@@ -255,7 +265,7 @@ foreach my $obj (@states) {
 	
 	# Copy 3 sets of Exon & Intron states
 	if ($st =~ /don|i|accep/) {
-		for (my $i=0; $i < 3; $i++) {
+		for (my $i=0; $i < $cds_quant; $i++) {
 			if ($st =~ /i/) {
 				my ($st_name) = $st =~ /(\w+)\d+$/;
 				$st_name     .= "$i";

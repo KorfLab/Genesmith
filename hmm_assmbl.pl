@@ -5,8 +5,8 @@ use STATE;
 use HMMstar;
 use DataBrowser;
 use Getopt::Std;
-use vars qw($opt_h $opt_5 $opt_m $opt_c $opt_d $opt_i $opt_a $opt_s $opt_3 $opt_b $opt_B $opt_D $opt_A $opt_U $opt_E);
-getopts('h:5:m:c:d:i:a:s:3:b:BD:A:U:E:');
+use vars qw($opt_h $opt_1 $opt_S $opt_5 $opt_m $opt_c $opt_d $opt_i $opt_a $opt_s $opt_3 $opt_b $opt_B $opt_D $opt_A $opt_U $opt_E);
+getopts('h1S5:m:c:d:i:a:s:3:b:BD:A:U:E:');
 
 # Change options to use Getopt::Long to allow an input of 0 for branch and polyA options
 # DEFAULT settings [options]
@@ -43,6 +43,8 @@ universal parameters:
   -A <length>  Acceptor Site Length                       Default = $L_ACCEP
   -U <length>  upstream training                          Default = $L_UP
   -E <length>  downtream training                         Default = $L_DOWN
+  -1           Convert for Standard to Basic HMM with 1 CDS state
+  -S           Option to exclude start and stop states from basic model
   -h           help (format and details)
 " unless @ARGV == 2;
 
@@ -75,13 +77,20 @@ if ($START   !~ /^\d+$/ or
     $L_DON   !~ /^\d+$/ or
     $L_ACCEP !~ /^\d+$/ or    
     $L_UP    !~ /^\d+$/ or
-    $L_DOWN  !~ /^\d+$/   ) {
+    $L_DOWN  !~ /^\d+$/ or
+    $opt_S and !$opt_1    ) {
     die "Invalid input [options]\n";
 }
 
 # OPTIONAL states
-$BRANCH   = $B_ORDER if $opt_B;  # set order of branch motif states 
-my $MOTIF = "TACTAAC";
+my $cds_name  = 'cds';
+my $cds_quant = 3;                   # Quantity of CDS states for Standard Model
+my $i_quant   = 3;                   # Quantity of Intron states for Standard Model
+$cds_name     = 'CDS' if $opt_1;
+$cds_quant    = 1     if $opt_1;     # 1 CDS for the Basic model [-1]
+$i_quant      = 1     if $opt_1;     # 1 Intron state for the Basic model [-1]
+$BRANCH       = $B_ORDER if $opt_B;  # set order of branch motif states 
+my $MOTIF = "TACTAAC";               # Branch Motif discovered in S.cerevisiae only
 
 # PATH of trained State Emissions
 my ($result_dir) = $GFF =~ /\/?(\w+\.*\w+\d*)\.gff$/;
@@ -90,10 +99,10 @@ die "Emissions directory PATH does not exist\n" if !-d $path;
 
 
 # Info for each Group of States
-my @st_order  = ($UP,  $START,  $EXON, $DON,  $INTRON, $ACCEP,  $STOP,  $DOWN);
-my @st_name   = ('GU', 'start', 'cds', 'don', 'i',     'accep', 'stop', 'GD');
-my @st_label  = ('U',  'C',     'C',   'I',   'I',     'I',     'C',    'D');
-my @st_quant  = ( 1,    3,       3,    $L_DON, 3,      $L_ACCEP, 3,      1);
+my @st_order  = ($UP,  $START,  $EXON,       $DON,   $INTRON,  $ACCEP,  $STOP,  $DOWN);
+my @st_name   = ('GU', 'start', $cds_name,   'don',  'i',      'accep', 'stop', 'GD');
+my @st_label  = ('U',  'C',     'C',         'I',    'I',      'I',     'C',    'D');
+my @st_quant  = ( 1,    3,       $cds_quant, $L_DON, $i_quant, $L_ACCEP, 3,      1);
 
 
 #----------------------------------------------------------#
@@ -110,11 +119,11 @@ for (my $i=0; $i < @st_quant; $i++) {
 		if  ($name =~ /start|stop/) {
 			$st_length  = $quant + $order;
 			my $st_obj  = new STATE($name, $st_label[$i], $order, $st_length);
-			push(@states, $st_obj);
+			push(@states, $st_obj) if !$opt_S;
 		} elsif ($name =~ /don|accep/) {
 			# Produce all three sets of Donor and Acceptor States
 			$st_length  = $quant + $order;
-			for (my $r=0; $r < 3; $r++) {
+			for (my $r=0; $r < $i_quant; $r++) {
 				my $st_name = $name . "_$r";
 				my $st_obj  = new STATE($st_name, $st_label[$i], $order, $st_length);
 				push(@states, $st_obj);
@@ -128,7 +137,7 @@ for (my $i=0; $i < @st_quant; $i++) {
 			}
 			
 			# CDS States
-			if ($name =~ /cds/) {
+			if ($name =~ /cds|CDS/) {
 				my $st_obj = new STATE($name, $st_label[$i], $order, $st_length);
 				push(@states, $st_obj);
 			}
@@ -302,6 +311,7 @@ foreach my $id (keys %gene_struc) {
 		}
 	}
 	# Store Transition Counts
+	$labseq =~ tr/18/22/ if $opt_S;
 	my @labels = split('', $labseq);
 	push(@labels, 'END');
 	for (my $i=1; $i < @labels; $i++) {
@@ -310,7 +320,7 @@ foreach my $id (keys %gene_struc) {
 		$trans_freq{$lab}{$nxt_lab}++;
 	}
 }
-#browse(\%trans_freq);
+# browse(\%trans_freq);
 
 
 #----------------------------------------------------------------------#
@@ -344,13 +354,14 @@ for (my $i=0; $i < @states; $i++) {
 			$states[$i]->t_matrix($st, $t_prob);
 			$states[$i]->t_matrix('END', (1 - $t_prob));
 		}
-		if ($label =~ /1/ and $st =~ /start/) {
+		if ($label =~ /1/ and $st =~ /start/ and !$opt_S) {
 			$states[$i]->t_matrix($states[$i+1]->name, 1);
 		}
-		if ($label =~ /8/ and $st =~ /stop/) {
+		if ($label =~ /8/ and $st =~ /stop/ and !$opt_S) {
 			$states[$i]->t_matrix($states[$i+1]->name, 1);
 		}
-		if ($label =~ /2/ and $st =~ /cds\d+/) {
+		# Standard Model with 3 CDS states
+		if ($label =~ /2/ and $st =~ /cds\d+/ and $cds_quant == 3) {
 			my ($pos) = $st =~ /cds(\d+)/;
 			my $cds_trans  = $trans_freq{$label}{$label};
 			my $don_trans  = $trans_freq{$label}{'5'};
@@ -363,12 +374,31 @@ for (my $i=0; $i < @states; $i++) {
 				$states[$i]->t_matrix('stop0',  ($stop_trans/$tot_3trans));
 			} else {
 				my $tot_2trans  = $cds_trans + $don_trans;
-				my $don_name = "don0_$pos";
+				my $don_st = "don0_$pos";
 				$pos++;
-				my $cds_name = "cds$pos";
-				$states[$i]->t_matrix($cds_name, ($cds_trans/$tot_2trans));
-				$states[$i]->t_matrix($don_name, ($don_trans/$tot_2trans));
+				my $cds_st = "cds$pos";
+				$states[$i]->t_matrix($cds_st, ($cds_trans/$tot_2trans));
+				$states[$i]->t_matrix($don_st, ($don_trans/$tot_2trans));
 			}
+		}
+		# Basic Model with 1 CDS state
+		if ($label =~ /2/ and $st =~ /CDS\d+/ and $cds_quant == 1) {
+			my ($pos) = $st =~ /CDS(\d+)/;
+			my $cds_trans  = $trans_freq{$label}{$label};
+			my $don_trans  = $trans_freq{$label}{'5'};
+			my $total_trans = $cds_trans + $don_trans;
+			if (!$opt_S) {
+				my $stop_trans = $trans_freq{$label}{'8'};
+				$total_trans  += $stop_trans;
+				$states[$i]->t_matrix('stop0', ($stop_trans/$total_trans));
+			}
+			if ($opt_S) {
+				my $downstr_trans = $trans_freq{$label}{'9'};
+				$total_trans     += $downstr_trans;
+				$states[$i]->t_matrix('GD0', ($downstr_trans/$total_trans));
+			}
+			$states[$i]->t_matrix($st,      ($cds_trans/$total_trans));
+			$states[$i]->t_matrix('don0_0', ($don_trans/$total_trans));
 		}
 		# Process BRANCH state Transitions
 		if ($BRANCH eq 'NO') {
@@ -455,9 +485,15 @@ for (my $i=0; $i < @states; $i++) {
 				if ($set == 2) {
 					$states[$i]->t_matrix('cds0', 1);
 				} else {
-					$set++;
-					my $st_name = "cds$set";
-					$states[$i]->t_matrix($st_name, 1);
+					my $st_name;
+					if ($cds_quant == 3) {
+						$set++;
+						$st_name = "cds$set";
+						$states[$i]->t_matrix($st_name, 1);
+					} else {
+						$st_name = "CDS$set";
+						$states[$i]->t_matrix($st_name, 1);
+					}
 				}
 			} else {
 				$pos++;
@@ -468,13 +504,13 @@ for (my $i=0; $i < @states; $i++) {
 	}
 }
 #Sanity Check for High Order CDS Transition Matrix
-# foreach my $obj (@states) { 
-# 	my $st    = $obj->name;
-# 	my $order = $obj->order;
-# 	my $quant = $obj->st_length;
-# 	print "\n\n", $st, "\t", $order, "\n";
-# 	browse($obj->t_matrix);
-# }
+foreach my $obj (@states) { 
+	my $st    = $obj->name;
+	my $order = $obj->order;
+	my $quant = $obj->st_length;
+	print "\n\n", $st, "\t", $order, "\n";
+	browse($obj->t_matrix);
+}
 
 
 #-------------------#
