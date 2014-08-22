@@ -213,6 +213,8 @@ int main (int argc, char ** argv) {
 			std::string st = feat[i].feature;
 			std::string id  = feat[i].seqname;
 			if (id.substr(0,1) == ">") {id.erase(0,1);}
+			
+			/* Standard Model 3 CDS states */
 			if (prev_st == "GU0" and st == "start0") {
 				start_id  = id;
 				cds_start = feat[i].start;
@@ -232,6 +234,40 @@ int main (int argc, char ** argv) {
 				cds_start = feat[i].start;
 			}
 			if (prev_st == "stop1" and st == "stop2") {
+				end_id  = id;
+				cds_end = feat[i].end;
+				if (start_id == end_id) {
+					std::cout << id              << "\t" 
+						      << feat[i].source  << "\t" 
+						      << "CDS"           << "\t"
+						      << cds_start       << "\t"
+						      << cds_end         << "\t"
+						      << feat[i].score   << "\t"
+						      << feat[i].strand  << "\t"
+						      << id              << "\n";
+				}
+			}
+			
+			/* Basic Model 1 CDS state */
+			if (prev_st == "GU0" and st == "CDS0") {
+				start_id  = id;
+				cds_start = feat[i].start;
+			}
+			if (prev_st == "CDS0" and st.substr(0,3) == "don") {
+				cds_end = feat[i].end;
+				std::cout   << id              << "\t" 
+						    << feat[i].source  << "\t" 
+						    << "CDS"           << "\t"
+						    << cds_start       << "\t"
+						    << cds_end         << "\t"
+						    << feat[i].score   << "\t"
+						    << feat[i].strand  << "\t"
+						    << id              << "\n";
+			}
+			if (prev_st.substr(0,5) == "accep" and st == "CDS0") {
+				cds_start = feat[i].start;
+			}
+			if (prev_st == "CDS0" and st == "GD0") {
 				end_id  = id;
 				cds_end = feat[i].end;
 				if (start_id == end_id) {
