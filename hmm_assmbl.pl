@@ -20,8 +20,8 @@ my $STOP    = 0;     # Order Stop, starts with stop codon, length = 3 + order
 my $DOWN    = 0;     # Order Downstream
 my $B_ORDER = 0;     # Order of Branch Motif States
 my $BRANCH  = "NO";  # Order for the branch states (redefined to $B_ORDER if [-b] cmd opt is used)
-my $L_DON   = 2;     # Quantity of Donor States
-my $L_ACCEP = 2;     # Quantity of Acceptor States 
+my $L_DON   = 5;     # Quantity of Donor States
+my $L_ACCEP = 10;     # Quantity of Acceptor States 
 my $L_UP    = 500;   # Length of Upstream region parsed for training
 my $L_DOWN  = 500;   # Length of Downstream region parsed for training
 
@@ -86,9 +86,10 @@ if ($START   !~ /^\d+$/ or
 my $cds_name  = 'cds';
 my $cds_quant = 3;                   # Quantity of CDS states for Standard Model
 my $i_quant   = 3;                   # Quantity of Intron states for Standard Model
-$cds_name     = 'CDS' if $opt_1;
-$cds_quant    = 1     if $opt_1;     # 1 CDS for the Basic model [-1]
-$i_quant      = 1     if $opt_1;     # 1 Intron state for the Basic model [-1]
+$cds_name     = 'CDS'     if $opt_1 and !$opt_S;
+$cds_name     = 'CDSfull' if $opt_1 and $opt_S;
+$cds_quant    = 1         if $opt_1;     # 1 CDS for the Basic model [-1]
+$i_quant      = 1         if $opt_1;     # 1 Intron state for the Basic model [-1]
 $BRANCH       = $B_ORDER if $opt_B;  # set order of branch motif states 
 my $MOTIF = "TACTAAC";               # Branch Motif discovered in S.cerevisiae only
 
@@ -171,7 +172,7 @@ for (my $i=0; $i < @st_quant; $i++) {
 		}
 	}
 }
-foreach my $obj (@states) {browse($obj);}
+#foreach my $obj (@states) {browse($obj);}
 
 
 #---------------------------------#
@@ -187,9 +188,9 @@ foreach my $contig ($genome->contigs) {
 		my $in_count  = 1;
 		
 		# Upstream
-		my $upstream = $cds->start_site->sequence($L_UP,0); # substr based on lengths -> (upstream, downstream)
-		chop($upstream);                                    # start_site starts at A of ATG
-		$gene_struc{$id}{'Upstream'} = uc($upstream);
+		my $up_start = $cds->start_site->start - $L_UP;
+		$up_start = 0 if $up_start < 0;		
+		$gene_struc{$id}{'Upstream'} = uc(substr($contig->dna->sequence, $up_start, $cds->start_site->start - $up_start - 1));
 		
 		# Exons
 		foreach my $exon ($cds->exons) {
@@ -207,9 +208,10 @@ foreach my $contig ($genome->contigs) {
 			}
 		}
 		# Downstream 
-		my $downstream = $cds->stop_site->sequence(0, $L_DOWN + 2);
-		$downstream    = substr($downstream, 3, length($downstream) - 3);
-		$gene_struc{$id}{'Downstream'} = uc($downstream);
+		my $dn_beg = $cds->stop_site->end + 2;
+		my $dn_len = length($contig->dna->sequence) - $dn_beg +1;
+		$dn_len = $L_DOWN if $dn_len > $L_DOWN;
+		$gene_struc{$id}{'Downstream'} = uc(substr($contig->dna->sequence, $dn_beg, $dn_len));
 	}
 }
 
@@ -382,24 +384,30 @@ for (my $i=0; $i < @states; $i++) {
 			}
 		}
 		# Basic Model with 1 CDS state
-		if ($label =~ /2/ and $st =~ /CDS\d+/ and $cds_quant == 1) {
+		if ($label =~ /2/ and $st =~ /^CDS\d+/ and $cds_quant == 1) {
 			my ($pos) = $st =~ /CDS(\d+)/;
-			my $cds_trans  = $trans_freq{$label}{$label};
-			my $don_trans  = $trans_freq{$label}{'5'};
-			my $total_trans = $cds_trans + $don_trans;
-			if (!$opt_S) {
-				my $stop_trans = $trans_freq{$label}{'8'};
-				$total_trans  += $stop_trans;
-				$states[$i]->t_matrix('stop0', ($stop_trans/$total_trans));
-			}
-			if ($opt_S) {
-				my $downstr_trans = $trans_freq{$label}{'9'};
-				$total_trans     += $downstr_trans;
-				$states[$i]->t_matrix('GD0', ($downstr_trans/$total_trans));
-			}
+			my $cds_trans   = $trans_freq{$label}{$label};
+			my $don_trans   = $trans_freq{$label}{'5'};
+			my $stop_trans  = $trans_freq{$label}{'8'};
+			my $total_trans = $cds_trans + $don_trans + $stop_trans;
+			$states[$i]->t_matrix('stop0', ($stop_trans/$total_trans));
 			$states[$i]->t_matrix($st,      ($cds_trans/$total_trans));
 			$states[$i]->t_matrix('don0_0', ($don_trans/$total_trans));
 		}
+		
+		# Basic Model with 1 CDS state and no Start/Stop states
+		if ($label =~ /2/ and $st =~ /^CDSfull\d+/ and $cds_quant == 1) {
+			my ($pos) = $st =~ /CDSfull(\d+)/;
+			my $cds_trans     = $trans_freq{$label}{$label};
+			my $don_trans     = $trans_freq{$label}{'5'};
+			my $downstr_trans = $trans_freq{$label}{'9'};
+			my $total_trans   = $cds_trans + $don_trans + $downstr_trans;
+			$states[$i]->t_matrix('GD0', ($downstr_trans/$total_trans));
+			$states[$i]->t_matrix($st,      ($cds_trans/$total_trans));
+			$states[$i]->t_matrix('don0_0', ($don_trans/$total_trans));
+		}
+
+		
 		# Process BRANCH state Transitions
 		if ($BRANCH eq 'NO') {
 			if ($label =~ /5/ and $st =~ /don/) {
@@ -491,7 +499,8 @@ for (my $i=0; $i < @states; $i++) {
 						$st_name = "cds$set";
 						$states[$i]->t_matrix($st_name, 1);
 					} else {
-						$st_name = "CDS$set";
+						$st_name = "CDS$set"     if $opt_1 and !$opt_S;
+						$st_name = "CDSfull$set" if $opt_1 and $opt_S;
 						$states[$i]->t_matrix($st_name, 1);
 					}
 				}
@@ -504,13 +513,13 @@ for (my $i=0; $i < @states; $i++) {
 	}
 }
 #Sanity Check for High Order CDS Transition Matrix
-foreach my $obj (@states) { 
-	my $st    = $obj->name;
-	my $order = $obj->order;
-	my $quant = $obj->st_length;
-	print "\n\n", $st, "\t", $order, "\n";
-	browse($obj->t_matrix);
-}
+# foreach my $obj (@states) { 
+# 	my $st    = $obj->name;
+# 	my $order = $obj->order;
+# 	my $quant = $obj->st_length;
+# 	print "\n\n", $st, "\t", $order, "\n";
+# 	browse($obj->t_matrix);
+# }
 
 
 #-------------------#
@@ -519,10 +528,11 @@ foreach my $obj (@states) {
 my $DATE      = `date`; chomp($DATE);
 my $ST_COUNT  = scalar(@states);
 my $TRACEBACK = "[FUNCTION:	TRANSLATE	TRACK:	SEQ	COMBINE_LABEL:	C	TO_LABEL:	U]";
-my $FH        = $result_dir . "_$ST_COUNT" . ".hmm";
 
-open(OUT, ">$FH") or die "Could not write into OUT\n";
-print OUT "#STOCHHMM MODEL FILE
+# my $FH        = $result_dir . "_$ST_COUNT" . ".hmm";
+# open(OUT, ">$FH") or die "Could not write into OUT\n";
+
+print "#STOCHHMM MODEL FILE
 
 <MODEL INFORMATION>
 ======================================================
@@ -555,38 +565,47 @@ foreach my $obj (@states) {
 	my $trans     = $obj->t_matrix;
 	my $em_counts = $obj->emission;
 	
-	print OUT "##################################################\n";
-	print OUT "STATE:\n";
-	print OUT "\tNAME:\t$st\n";
-	print OUT "\tGFF_DESC:\t$st\n";
-	print OUT "\tPATH_LABEL: $label\n";
-	print OUT "TRANSITION:	STANDARD:	P(X)\n";
+	print "##################################################\n";
+	print "STATE:\n";
+	print "\tNAME:\t$st\n";
+	print "\tGFF_DESC:\t$st\n";
+	print "\tPATH_LABEL: $label\n";
+	print "TRANSITION:	STANDARD:	P(X)\n";
 	foreach my $t (keys %$trans) {
 		my $t_prob = $trans->{$t};
-		print OUT "\t$t:\t$t_prob";
-		if ($st =~ /^don/  and $t =~ /i|branch_i0|branch_i2/) {print OUT "\t$TRACEBACK";}
-		if ($st =~ /^GD/ and $st eq $t)                       {print OUT "\t$TRACEBACK";}
-		print OUT "\n";
+		print "\t$t:\t$t_prob";
+		if ($st =~ /^don/  and $t =~ /i|branch_i0|branch_i2/) {print "\t$TRACEBACK";}
+		if ($st =~ /^GD/ and $st eq $t)                       {print "\t$TRACEBACK";}
+		print "\n";
 	}
 	# Get Final Emission
-	print OUT "EMISSION:	SEQ:	COUNTS\n";
-	print OUT "\tORDER:	$order	AMBIGUOUS:	AVG\n";
-	my $em_file = "$st\-$label\-$order";
-	my $em_path = $path . $em_file . '.txt';
+	print "EMISSION:	SEQ:	COUNTS\n";
+	print "\tORDER:	$order	AMBIGUOUS:	AVG\n";
+	my $em_path = $path . $st;
+	if    ($st =~ /CDS\d+/     and !$opt_S) {$em_path .= "-1";}
+	elsif ($st =~ /CDSfull\d+/ and $opt_S)  {$em_path .= "-1S";}
+	else                                    {$em_path .= "-std";}
+	$em_path   .= "-$L_UP"             if $st =~ /GU/;
+	$em_path   .= "-$L_DOWN"           if $st =~ /GD/;
+	$em_path   .= "-$L_DON"            if $st =~ /don/;
+	$em_path   .= "-$L_ACCEP"          if $st =~ /accep/;
+	$em_path   .= "-$L_DON\_$L_ACCEP"  if $st =~ /i|branch/;
+	$em_path   .= "-$label\-$order\.txt";
+	
 	open (EM, "<$em_path") or die "Error reading $em_path\n";
 	while (my $line = <EM>) {
-		print OUT $line;
+		print $line;
 	}
 }
-print OUT "##################################################\n";
-print OUT "//END\n";
+print "##################################################\n";
+print "//END\n";
 
-close OUT;
+# close OUT;
 
 
 
 #===================================================================#
-# SUBRINES														    #
+# SUBROUTINES   												    #
 #===================================================================#
 
 # Get Position Coordinates for Branch Motif

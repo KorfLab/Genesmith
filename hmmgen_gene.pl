@@ -5,8 +5,8 @@ use STATE;
 use HMMstar;
 use DataBrowser;
 use Getopt::Std;
-use vars qw($opt_h $opt_1 $opt_S $opt_5 $opt_m $opt_c $opt_d $opt_i $opt_a $opt_s $opt_3 $opt_D $opt_A $opt_U $opt_E);
-getopts('h1S5:m:c:d:i:a:s:3:D:A:U:E:');
+use vars qw($opt_h $opt_5 $opt_m $opt_c $opt_d $opt_i $opt_a $opt_s $opt_3 $opt_D $opt_A $opt_U $opt_E);
+getopts('h5:m:c:d:i:a:s:3:D:A:U:E:');
 
 
 # DEFAULT settings [options]
@@ -18,8 +18,8 @@ my $INTRON  = 0;     # Order Intron, always 3 states
 my $ACCEP   = 0;     # Order Acceptor, ends with canonical AG, length = 2 + order
 my $STOP    = 0;     # Order Stop, starts with stop codon, length = 3 + order
 my $DOWN    = 0;     # Order Downstream
-my $L_DON   = 2;     # Quantity of Donor States
-my $L_ACCEP = 2;     # Quantity of Acceptor States 
+my $L_DON   = 5;     # Quantity of Donor States
+my $L_ACCEP = 10;     # Quantity of Acceptor States 
 my $L_UP    = 500;   # Length of Upstream region parsed for training
 my $L_DOWN  = 500;   # Length of Downstream region parsed for training
 
@@ -40,8 +40,6 @@ universal parameters:
   -A <length>  Acceptor Site Length                       Default = $L_ACCEP
   -U <length>  upstream training                          Default = $L_UP
   -E <length>  downtream training                         Default = $L_DOWN
-  -1           Convert for Standard to Basic HMM with 1 CDS state
-  -S           Option to exclude start and stop states from basic model
   -h           help (format and details)
 " unless @ARGV == 2;
 
@@ -72,25 +70,16 @@ if ($START   !~ /^\d+$/ or
     $L_DON   !~ /^\d+$/ or
     $L_ACCEP !~ /^\d+$/ or    
     $L_UP    !~ /^\d+$/ or
-    $L_DOWN  !~ /^\d+$/ or 
-    $opt_S and !$opt_1    ) {
+    $L_DOWN  !~ /^\d+$/   ) {
     die "Invalid input [options]\n";
 }
 
-# State quantities for STANDARD Model
-my $cds_name  = 'cds';
-my $cds_quant = 3;
-# If [-1] option selected adjust CDS state info for BASIC Model
-###### Change all code necessary to implement BASIC model #######
-$cds_name  = 'CDS' if $opt_1;
-$cds_quant = 1     if $opt_1;
-
-
 # Info for each Group of States
-my @st_order  = ($UP,  $START,  $EXON,      $DON,  $INTRON, $ACCEP,  $STOP,  $DOWN);
-my @st_name   = ('GU', 'start', $cds_name,  'don', 'i',     'accep', 'stop', 'GD');
-my @st_label  = ('U',  'C',     'C',        'I',   'I',     'I',     'C',    'D');
-my @st_quant  = ( 1,    3,      $cds_quant, $L_DON, 1,      $L_ACCEP, 3,      1);
+my @st_order  = ($UP,  $START,  $EXON, $EXON, $EXON,     $DON,  $INTRON, $ACCEP,  $STOP,  $DOWN);
+my @st_name   = ('GU', 'start', 'cds', 'CDS', 'CDSfull', 'don', 'i',     'accep', 'stop', 'GD');
+my @st_label  = ('U',  'C',     'C',   'C',   'C',       'I',   'I',     'I',     'C',    'D');
+my @st_quant  = ( 1,    3,       3,     1,     1,        $L_DON, 1,      $L_ACCEP, 3,      1);
+
 
 
 #---------------------------------------------------------#
@@ -172,20 +161,25 @@ foreach my $id (keys %gene_struc) {
 		
 		# Start
 		if ($st =~ /^start\d+$/) {
-			my $seq = substr($upstream, -$order) . substr($CDS, 0, 3);
+			my $seq = substr($upstream, -$order, $order) . substr($CDS, 0, 3);
 			$states[$s]->emission($st, $order, $seq);
 		}
 		
-		# 3 CDS states
-		if ($st =~ /cds/) {
+		# 3 CDS states [Standard Model]
+		if ($st =~ /^cds/) {
 			$states[$s]->emission($st, $order, $CDS);
 		}
 		
-		# 1 CDS state
-		if ($st =~ /CDS/) {
+		# 1 CDS state [Basic Model]
+		if ($st =~ /^CDS\d+/) {
 			my $seq = $gene_struc{$id}{'CDS'};
-			if ($opt_1 and $opt_S) {$states[$s]->emission($st, $order, $seq);}
-			if ($opt_1 and !$opt_S)  {$states[$s]->emission($st, $order, substr($seq, 3, length($seq) -6));}
+			$states[$s]->emission($st, $order, substr($seq, 3, length($seq) -6));
+		}
+		
+		# 1 CDS [Basic Model with no Start/Stop states]
+		if ($st =~ /^CDSfull\d+/) {
+			my $seq = $gene_struc{$id}{'CDS'};
+			$states[$s]->emission($st, $order, $seq);
 		}
 		
 		# Donor
@@ -193,7 +187,7 @@ foreach my $id (keys %gene_struc) {
 			my $count = 0;
 			foreach my $intron (@{$gene_struc{$id}{'Introns'}}) {
 				my $exon = $gene_struc{$id}{'Exons'}[$count];
-				my $seq  = substr($exon, -$order) . substr($intron, 0, $L_DON);
+				my $seq  = substr($exon, -$order, $order) . substr($intron, 0, $L_DON);
 				$states[$s]->emission($st, $order, $seq);
 				$count++;
 			}
@@ -213,7 +207,7 @@ foreach my $id (keys %gene_struc) {
 			foreach my $intron (@{$gene_struc{$id}{'Introns'}}) {
 				my $exon = $gene_struc{$id}{'Exons'}[$count];
 				my $previous_seq = $exon . substr($intron, 0, $L_DON);
-				my $seq = substr($previous_seq, -$order);  
+				my $seq = substr($previous_seq, -$order, $order);  
 				$seq   .= substr($intron, $L_DON, length($intron) - ($L_DON + $L_ACCEP));
 				$states[$s]->emission($st, $order, $seq);
 				$count++;
@@ -228,7 +222,7 @@ foreach my $id (keys %gene_struc) {
 		
 		# Downstream
 		if ($st =~ /^GD/) {
-			my $seq = substr($gene_struc{$id}{'CDS'}, -$order) . $downstream;
+			my $seq = substr($gene_struc{$id}{'CDS'}, -$order, $order) . $downstream;
 			$states[$s]->emission($st, $order, $seq);
 		}
 	}
@@ -241,9 +235,21 @@ foreach my $id (keys %gene_struc) {
 # 	browse($obj->emission);
 # }
 
-#------------------------------------#
-# Create State Emission Output Files #
-#------------------------------------#
+#-------------------------------------------------------------------------------------------#
+# Create State Emission Output Files                                                        #
+# * Output formats:                                                                         #
+#   - Standard                                                                              #
+#         [state name]-[Model Type]-[State Label]-[State Order].txt                         #
+#   - If state is affected by modified state duration or quantity during training           #
+#         [state name]-[Model Type]-[State length/quantity]-[State Label]-[State Order].txt #
+#            * State length/quantity params:                                                #
+#                - Introns    = "$L_DON_$L_ACCEP"                                           #
+#                - Donors     = "$L_DON"                                                    #
+#                - Acceptors  = "$L_ACCEP"                                                  #
+#                - Upstream   = "$L_UP"                                                     #
+#                - Downstream = "$L_DOWN"                                                   #
+#-------------------------------------------------------------------------------------------#
+my $I_QUANT = 3;   # Number of copies generated for each Intron state
 
 # Create Output Directory
 my ($result_dir) = $GFF =~ /\/?(\w+\.*\w+\d*)\.gff$/;
@@ -265,22 +271,30 @@ foreach my $obj (@states) {
 	
 	# Copy 3 sets of Exon & Intron states
 	if ($st =~ /don|i|accep/) {
-		for (my $i=0; $i < $cds_quant; $i++) {
+		for (my $i=0; $i < $I_QUANT; $i++) {
 			if ($st =~ /i/) {
 				my ($st_name) = $st =~ /(\w+)\d+$/;
 				$st_name     .= "$i";
-				$st_name     .= "-" . $label ."-" . $order . ".txt";
+				$st_name     .= "-std-$L_DON\_$L_ACCEP\-$label\-$order\.txt";
 				my $fh = $path . $st_name;
 				output_st_em($fh, $em_output);
 			} else {
 				my $st_name = $st . "_$i";
-				$st_name   .= "-" . $label ."-" . $order . ".txt";
+				$st_name   .= "-std-$L_DON"       if $st =~ /don/;
+				$st_name   .= "-std-$L_ACCEP"     if $st =~ /accep/;
+				$st_name   .= "-$label\-$order\.txt";
 				my $fh = $path . $st_name;
 				output_st_em($fh, $em_output);
 			}
 		}
 	} else {
-		my $st_name = $st . "-" . $label ."-" . $order . ".txt";
+		my $st_name;
+		if    ($st =~ /^CDS\d+/)     {$st_name = "$st\-1-";}
+		elsif ($st =~ /^CDSfull\d+/) {$st_name = "$st\-1S-";}
+		else                         {$st_name = "$st\-std-";}
+		$st_name    .= "$L_UP\-"             if $st =~ /GU/;
+		$st_name    .= "$L_DOWN\-"           if $st =~ /GD/;
+		$st_name    .= "$label\-$order\.txt";
 		my $fh = $path . $st_name;
 		output_st_em($fh, $em_output);
 	}
@@ -288,7 +302,7 @@ foreach my $obj (@states) {
 
 
 #===================================================================#
-# SUBRINES														    #
+# SUBROUTINES														#
 #===================================================================#
 
 # Output state emissions in a text file

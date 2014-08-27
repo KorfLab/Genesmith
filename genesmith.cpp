@@ -249,11 +249,7 @@ int main (int argc, char ** argv) {
 			}
 			
 			/* Basic Model 1 CDS state */
-			if (prev_st == "GU0" and st == "CDS0") {
-				start_id  = id;
-				cds_start = feat[i].start;
-			}
-			if (prev_st == "CDS0" and st.substr(0,3) == "don") {
+			if (prev_st.substr(0,3) == "CDS" and st.substr(0,3) == "don") {
 				cds_end = feat[i].end;
 				std::cout   << id              << "\t" 
 						    << feat[i].source  << "\t" 
@@ -264,10 +260,19 @@ int main (int argc, char ** argv) {
 						    << feat[i].strand  << "\t"
 						    << id              << "\n";
 			}
-			if (prev_st.substr(0,5) == "accep" and st == "CDS0") {
+			if (prev_st.substr(0,5) == "accep" and st.substr(0,3) == "CDS") {
 				cds_start = feat[i].start;
 			}
-			if (prev_st == "CDS0" and st == "GD0") {
+
+			/* Basic Model 1 CDS state with no Start/Stop States */
+			if (prev_st == "GU0" and st == "CDSfull0") {
+				start_id  = id;
+				cds_start = feat[i].start;
+			}
+			if (prev_st.substr(0,5) == "accep" and st == "CDSfull0") {
+				cds_start = feat[i].start;
+			}
+			if (prev_st == "CDSfull0" and st == "GD0") {
 				end_id  = id;
 				cds_end = feat[i].end;
 				if (start_id == end_id) {

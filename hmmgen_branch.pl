@@ -5,15 +5,15 @@ use STATE;
 use HMMstar;
 use DataBrowser;
 use Getopt::Std;
-use vars qw($opt_h $opt_1 $opt_i $opt_b $opt_D $opt_A);
-getopts('h1i:b:D:A:');
+use vars qw($opt_h $opt_i $opt_b $opt_D $opt_A);
+getopts('hi:b:D:A:');
 
 
 my $INTRON  = 0;
 my $BRANCH  = 0;
-my $L_DON   = 2;
-my $L_ACCEP = 2;
-my $I_QUANT = 3;
+my $L_DON   = 5;
+my $L_ACCEP = 10;
+my $I_QUANT = 3;    # Number of copies generated for each state
 
 die "
 usage: $0 [options] <GFF> <FASTA>
@@ -23,7 +23,6 @@ universal parameters:
   -b <order>   Branch states info       Default = $BRANCH
   -D <length>  Donor site length        Default = $L_DON
   -A <length> Acceptor site length      Defualt = $L_ACCEP       
-  -1           Convert for Standard to Basic HMM with 1 CDS state
   -h           help (format and details)
 " unless @ARGV == 2;
 
@@ -31,7 +30,6 @@ $INTRON  = $opt_i if $opt_i;
 $BRANCH  = $opt_b if $opt_b;
 $L_DON   = $opt_D if $opt_D;
 $L_ACCEP = $opt_A if $opt_A;
-$I_QUANT = 1      if $opt_1;
 my ($GFF, $FASTA) = @ARGV;
 
 if ($INTRON  !~ /^\d+$/ or 
@@ -184,9 +182,10 @@ foreach my $obj (@states) {
 	my %em_rows   = get_em_rows($order);
 	my $em_output = em_table($em_counts, \%em_rows, $order);
 	
+	# Create 3 sets of Intron states for Gene Model
 	for (my $i=0; $i < $I_QUANT; $i++) {
 		my $st_name = $st . "_$i";
-		$st_name   .= "-" . $label ."-" . $order . ".txt";
+		$st_name   .= "-std-$L_DON\_$L_ACCEP\-$label\-$order\.txt";
 		my $fh = $path . $st_name;
 		output_st_em($fh, $em_output);
 	}

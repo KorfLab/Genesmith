@@ -5,8 +5,8 @@ use STATE;
 use HMMstar;
 use DataBrowser;
 use Getopt::Std;
-use vars qw($opt_h $opt_1 $opt_S $opt_b $opt_D $opt_A $opt_U $opt_E);
-getopts('h1SbD:A:U:E:');
+use vars qw($opt_h $opt_b);
+getopts('hb');
 
 #========================================================#
 # PURPOSE                                                #
@@ -15,65 +15,44 @@ getopts('h1SbD:A:U:E:');
 #========================================================#
 
 # DEFAULT settings [options]
-my $MAX_ORDER = 5;     # The Highest order of emissions to be generated
-my $L_DON     = 2;     # Quantity of Donor States
-my $L_ACCEP   = 2;     # Quantity of Acceptor States 
-my $L_UP      = 500;   # Length of Upstream region parsed for training
-my $L_DOWN    = 500;   # Length of Downstream region parsed for training
-
+my $MAX_ORDER  = 5;      # The Highest order of emissions to be generated
+my $L_DON      = 9;      # Quantity of Donor States [5-9]
+my $L_ACCEP    = 30;     # Quantity of Acceptor States [10-30]
+my $INTERGENIC = 1000;   # Length of Upstream/Downstream regions parsed for training [100-1000]
 
 die "
 usage: $0 [options] <GFF> <FASTA>
 
 universal parameters:
-  -1           Convert for Standard to Basic HMM with 1 CDS state
-  -S           Option to exclude start and stop states from basic model
-  -b           Option to include branch states
-  -D <length>  Donor Site Length                          Default = $L_DON
-  -A <length>  Acceptor Site Length                       Default = $L_ACCEP
-  -U <length>  upstream training                          Default = $L_UP
-  -E <length>  downtream training                         Default = $L_DOWN
-  -h           help (format and details)
+  -b   option to train Branch State emissions
+  -h   help
 " unless @ARGV == 2;
-
-$L_DON   = $opt_D if $opt_D;
-$L_ACCEP = $opt_A if $opt_A;
-$L_UP    = $opt_U if $opt_U;
-$L_DOWN  = $opt_E if $opt_E;
-
 my ($GFF, $FASTA) = @ARGV;
 
-# Sanity Check - options
-if ($L_DON   !~ /^\d+$/ or
-    $L_ACCEP !~ /^\d+$/ or    
-    $L_UP    !~ /^\d+$/ or
-    $L_DOWN  !~ /^\d+$/ or
-    $opt_S and !$opt_1    ) {
-    die "Invalid input [options]\n";
-}
 
 #------------------------------------------------------------------------------#
 # OPTIONAL STATES: branch states 
 
 if ($opt_b) {
 	for (my $i=0; $i <= $MAX_ORDER; $i++) {
-		my $cmd = "hmmgen_branch.pl ";
-		$cmd   .= "-1 " if $opt_1;
-		$cmd   .= "-i $i -b $i -D $L_DON -A $L_ACCEP ";
-		$cmd   .= "$GFF $FASTA";
-		`$cmd`;
+		for (my $d=5; $d < $L_DON+1;$d++) {
+			for (my $a=10; $a < $L_ACCEP+1; $a+=5) {
+				`hmmgen_branch.pl -i $i -b $i -D $d -A $a $GFF $FASTA`;
+			}
+		}
 	}
 }
 #------------------------------------------------------------------------------#
 
 # Generate Gene model states from order 0 - 5
 for (my $i=0; $i <= $MAX_ORDER; $i++) {
-	my $cmd = "hmmgen_gene.pl ";
-	$cmd   .= "-1 " if $opt_1;
-	$cmd   .= "-S " if $opt_S;
-	$cmd   .= "-5 $i -m $i -c $i -d $i -i $i -a $i -s $i -3 $i ";
-	$cmd   .= "-D $L_DON -A $L_ACCEP -U $L_UP -E $L_DOWN ";
-	$cmd   .= "$GFF $FASTA";
-	`$cmd`;
-} 
+	for(my $e=100; $e < $INTERGENIC+1; $e+=100) {
+		for(my $d=5; $d < $L_DON+1; $d++) {
+			for(my $a=10; $a < $L_ACCEP+1; $a+=5) {
+				`hmmgen_gene.pl -5 $i -m $i -c $i -d $i -i $i -a $i -s $i -3 $i -D $d -A $a -U $e -E $e $GFF $FASTA`;
+			}
+		}
+	}
+}
+
 
