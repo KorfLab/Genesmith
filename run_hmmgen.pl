@@ -29,7 +29,6 @@ universal parameters:
 " unless @ARGV == 2;
 my ($GFF, $FASTA) = @ARGV;
 
-
 #------------------------------------------------------------------------------#
 # OPTIONAL STATES: branch states 
 
@@ -47,12 +46,16 @@ if ($opt_b) {
 # Generate Gene model states from order 0 - 5
 for (my $i=0; $i <= $MAX_ORDER; $i++) {
 	for(my $e=100; $e < $INTERGENIC+1; $e+=100) {
-		for(my $d=5; $d < $L_DON+1; $d++) {
-			for(my $a=10; $a < $L_ACCEP+1; $a+=5) {
-				`hmmgen_gene.pl -5 $i -m $i -c $i -d $i -i $i -a $i -s $i -3 $i -D $d -A $a -U $e -E $e $GFF $FASTA`;
-			}
-		}
+		`hmmgen_gene.pl -5 $i -m $i -c $i -d $i -i $i -a $i -s $i -3 $i -D 5 -A 10 -U $e -E $e $GFF $FASTA`;
 	}
 }
 
+for (my $i=0; $i <= $MAX_ORDER; $i++) {
+	for(my $d=5; $d < $L_DON+1; $d++) {
+		for(my $a=10; $a < $L_ACCEP+1; $a+=5) {
+			next if $d == 5 and $a == 10;
+			`hmmgen_gene.pl -5 $i -m $i -c $i -d $i -i $i -a $i -s $i -3 $i -D $d -A $a $GFF $FASTA`;
+		}
+	}
+}
 
