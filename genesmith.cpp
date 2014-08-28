@@ -220,7 +220,7 @@ int main (int argc, char ** argv) {
 				cds_start = feat[i].start;
 			}
 			if (prev_st.substr(0,3) == "cds" and st.substr(0,3) == "don") {
-				cds_end = feat[i].end;
+				cds_end = feat[i].end -1;
 				std::cout   << id              << "\t" 
 						    << feat[i].source  << "\t" 
 						    << "CDS"           << "\t"
@@ -250,7 +250,7 @@ int main (int argc, char ** argv) {
 			
 			/* Basic Model 1 CDS state */
 			if (prev_st.substr(0,3) == "CDS" and st.substr(0,3) == "don") {
-				cds_end = feat[i].end;
+				cds_end = feat[i].end -1;
 				std::cout   << id              << "\t" 
 						    << feat[i].source  << "\t" 
 						    << "CDS"           << "\t"
@@ -274,7 +274,7 @@ int main (int argc, char ** argv) {
 			}
 			if (prev_st == "CDSfull0" and st == "GD0") {
 				end_id  = id;
-				cds_end = feat[i].end;
+				cds_end = feat[i].end -1;
 				if (start_id == end_id) {
 					std::cout << id              << "\t" 
 						      << feat[i].source  << "\t" 
