@@ -18,10 +18,9 @@ my $INTRON  = 0;     # Order Intron, always 3 states
 my $ACCEP   = 0;     # Order Acceptor, ends with canonical AG, length = 2 + order
 my $STOP    = 0;     # Order Stop, starts with stop codon, length = 3 + order
 my $DOWN    = 0;     # Order Downstream
-my $B_ORDER = 0;     # Order of Branch Motif States
-my $BRANCH  = "NO";  # Order for the branch states (redefined to $B_ORDER if [-b] cmd opt is used)
+my $BRANCH  = 0;     # Order for the branch motif states
 my $L_DON   = 5;     # Quantity of Donor States
-my $L_ACCEP = 10;     # Quantity of Acceptor States 
+my $L_ACCEP = 10;    # Quantity of Acceptor States 
 my $L_UP    = 500;   # Length of Upstream region parsed for training
 my $L_DOWN  = 500;   # Length of Downstream region parsed for training
 
@@ -37,7 +36,7 @@ universal parameters:
   -a <order>   acceptor site state info                   Default = $ACCEP
   -s <order>   stop codon state info                      Default = $STOP
   -3 <order>   downstream state info                      Default = $DOWN
-  -b <order>   branch motif state info                    Default = $B_ORDER
+  -b <order>   branch motif state info                    Default = $BRANCH
   -B           Option to include branch states
   -D <length>  Donor Site Length                          Default = $L_DON
   -A <length>  Acceptor Site Length                       Default = $L_ACCEP
@@ -56,7 +55,7 @@ $INTRON  = $opt_i if $opt_i;
 $ACCEP   = $opt_a if $opt_a;
 $STOP    = $opt_s if $opt_s;
 $DOWN    = $opt_3 if $opt_3;
-$B_ORDER = $opt_b if $opt_b;
+$BRANCH  = $opt_b if $opt_b;
 $L_DON   = $opt_D if $opt_D;
 $L_ACCEP = $opt_A if $opt_A;
 $L_UP    = $opt_U if $opt_U;
@@ -73,7 +72,7 @@ if ($START   !~ /^\d+$/ or
     $EXON    !~ /^\d+$/ or
     $INTRON  !~ /^\d+$/ or
     $DOWN    !~ /^\d+$/ or
-    $B_ORDER !~ /^\d+$/ or
+    $BRANCH  !~ /^\d+$/ or
     $L_DON   !~ /^\d+$/ or
     $L_ACCEP !~ /^\d+$/ or    
     $L_UP    !~ /^\d+$/ or
@@ -90,7 +89,6 @@ $cds_name     = 'CDS'     if $opt_1 and !$opt_S;
 $cds_name     = 'CDSfull' if $opt_1 and $opt_S;
 $cds_quant    = 1         if $opt_1;     # 1 CDS for the Basic model [-1]
 $i_quant      = 1         if $opt_1;     # 1 Intron state for the Basic model [-1]
-$BRANCH       = $B_ORDER if $opt_B;  # set order of branch motif states 
 my $MOTIF = "TACTAAC";               # Branch Motif discovered in S.cerevisiae only
 
 # PATH of trained State Emissions
@@ -144,7 +142,7 @@ for (my $i=0; $i < @st_quant; $i++) {
 			}
 			
 			# Intron States, Branch States - Conditional
-			if ($name =~ /i/ and $BRANCH =~ /^\d+$/) {
+			if ($name =~ /i/ and $opt_B) {
 				# Intron Body States before and after Branch Motif
 				my @in_branch = qw(branch_i0 branch_i1 branch_i2);
 				foreach my $st (@in_branch) {
@@ -159,7 +157,7 @@ for (my $i=0; $i < @st_quant; $i++) {
 					my $st_obj  = new STATE($st_name, 'I', $BRANCH, 1);
 					push (@states, $st_obj);
 				}
-			} elsif ($name =~ /i/ and $BRANCH =~ /^NO$/) {
+			} elsif ($name =~ /i/ and !$opt_B) {
 				my $st_obj = new STATE($name, $st_label[$i], $order, $st_length);
 				push(@states, $st_obj);
 			}
@@ -262,7 +260,7 @@ foreach my $id (keys %gene_struc) {
 						my $accep_lab = label('Acceptor', $accep, $L_DON, $L_ACCEP);
 
 						my ($br_start, $br_end) = get_branch_coord($MOTIF, $in_body);
-						if (defined $br_start and defined $br_end and $BRANCH =~ /\d+/) {
+						if (defined $br_start and defined $br_end and $opt_B) {
 							my $in_body1_len = $br_start;
 							my $motif_len    = ($br_end + 1) - $br_start;
 							my $in_body2_len = length($in_body) - ($br_end + 1);
@@ -278,8 +276,8 @@ foreach my $id (keys %gene_struc) {
 							$seq          .= $ex_seq . $in_seq;
 						} else {
 							my $in_lab;
-							$in_lab       = label('Introns', $in_body, $L_DON, $L_ACCEP)   if $BRANCH eq 'NO';
-							$in_lab       = label('branch_i2', $in_body, $L_DON, $L_ACCEP) if $BRANCH =~ /\d+/;
+							$in_lab       = label('Introns', $in_body, $L_DON, $L_ACCEP)   if !$opt_B;
+							$in_lab       = label('branch_i2', $in_body, $L_DON, $L_ACCEP) if $opt_B;
 							$labseq      .= $ex_lab . $don_lab . $in_lab . $accep_lab;
 							$seq         .= $ex_seq . $in_seq;
 						} 
@@ -297,8 +295,8 @@ foreach my $id (keys %gene_struc) {
 						my $ex_lab     = label('Exons', $ex_seq, $L_DON, $L_ACCEP);
 						my $don_lab    = label('Donor', $don, $L_DON, $L_ACCEP);
 						my $in_lab;
-						$in_lab        = label('Introns', $in_body, $L_DON, $L_ACCEP)   if $BRANCH eq 'NO';
-						$in_lab        = label('branch_i2', $in_body, $L_DON, $L_ACCEP) if $BRANCH =~ /\d+/;
+						$in_lab        = label('Introns', $in_body, $L_DON, $L_ACCEP)   if !$opt_B;
+						$in_lab        = label('branch_i2', $in_body, $L_DON, $L_ACCEP) if $opt_B;
 						my $accep_lab  = label('Acceptor', $accep, $L_DON, $L_ACCEP);
 						$labseq       .= $ex_lab . $don_lab . $in_lab . $accep_lab;
 						$seq          .= $ex_seq . $in_seq;
@@ -334,8 +332,8 @@ foreach my $id (keys %gene_struc) {
 #    * branch = b, branch_i0 = s, branch_i1 = e, branch_i2 = i         #
 #----------------------------------------------------------------------#
 my @lb_list;
-@lb_list = qw(0 1 2 3 4 5 6 7 8 9)       if $BRANCH eq 'NO';
-@lb_list = qw(0 1 2 3 4 5 i s b e 7 8 9) if $BRANCH =~ /\d+/;
+@lb_list = qw(0 1 2 3 4 5 6 7 8 9)       if !$opt_B;
+@lb_list = qw(0 1 2 3 4 5 i s b e 7 8 9) if $opt_B;
 
 for (my $i=0; $i < @states; $i++) {
 	my $st    = $states[$i]->name;
@@ -409,7 +407,7 @@ for (my $i=0; $i < @states; $i++) {
 
 		
 		# Process BRANCH state Transitions
-		if ($BRANCH eq 'NO') {
+		if (!$opt_B) {
 			if ($label =~ /5/ and $st =~ /don/) {
 				my ($pos) = $st =~ /don(\d+)_\d+/;
 				my ($set) = $st =~ /don\d+_(\d+)/;
@@ -430,7 +428,7 @@ for (my $i=0; $i < @states; $i++) {
 				my $accep_name = "accep0_$set";
 				$states[$i]->t_matrix($accep_name, (1 - $t_prob));
 			}
-		} elsif ($BRANCH =~ /\d+/) {
+		} elsif ($opt_B) {
 			if ($label =~ /5/ and $st =~ /don/) {
 				my ($pos) = $st =~ /don(\d+)_\d+/;
 				my ($set) = $st =~ /don\d+_(\d+)/;

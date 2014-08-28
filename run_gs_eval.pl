@@ -4,8 +4,8 @@ use warnings 'FATAL' => 'all';
 use FAlite;
 use DataBrowser;
 use Getopt::Std;
-use vars qw($opt_h $opt_5 $opt_m $opt_c $opt_d $opt_i $opt_a $opt_s $opt_3 $opt_b $opt_D $opt_A $opt_U $opt_E);
-getopts('h:5:m:c:d:i:a:s:3:b:D:A:U:E:');
+use vars qw($opt_h $opt_5 $opt_m $opt_c $opt_d $opt_i $opt_a $opt_s $opt_3 $opt_B $opt_b $opt_D $opt_A $opt_U $opt_E);
+getopts('h:5:m:c:d:i:a:s:3:Bb:D:A:U:E:');
 
 #==========================#
 # Genesmith Wrapper Script #
@@ -18,9 +18,9 @@ my $INTRON  = 0;     # Order Intron, always 3 states
 my $ACCEP   = 0;     # Order Acceptor, ends with canonical AG, length = 2 + order
 my $STOP    = 0;     # Order Stop, starts with stop codon, length = 3 + order
 my $DOWN    = 0;     # Order Downstream
-my $BRANCH  = "NO";  # Order for the branch states created by <hmmgen_branch.pl>
-my $L_DON   = 2;     # Quantity of Donor States
-my $L_ACCEP = 2;     # Quantity of Acceptor States 
+my $BRANCH  = 0;     # Order for the branch motif states
+my $L_DON   = 5;     # Quantity of Donor States
+my $L_ACCEP = 10;     # Quantity of Acceptor States 
 my $L_UP    = 500;   # Length of Upstream region parsed for training
 my $L_DOWN  = 500;   # Length of Downstream region parsed for training
 
@@ -37,7 +37,8 @@ universal parameters:
   -a <order>   acceptor site state info                   Default = $ACCEP
   -s <order>   stop codon state info                      Default = $STOP
   -3 <order>   downstream state info                      Default = $DOWN
-  -b <string>  OPTIONAL branch states, enter 'Y' for use  Default = $BRANCH
+  -b <order>   branch motif state info                    Default = $BRANCH
+  -B           OPTION to include branch states
   -D <length>  Donor Site Length                          Default = $L_DON
   -A <length>  Acceptor Site Length                       Default = $L_ACCEP
   -U <length>  upstream training                          Default = $L_UP
@@ -70,15 +71,13 @@ if ($START   !~ /^\d+$/ or
     $EXON    !~ /^\d+$/ or
     $INTRON  !~ /^\d+$/ or
     $DOWN    !~ /^\d+$/ or
-    ($BRANCH !~ /^NO$/  and $BRANCH !~ /^Y$/) or
+    $BRANCH  !~ /^\d+$/ or
     $L_DON   !~ /^\d+$/ or
     $L_ACCEP !~ /^\d+$/ or    
     $L_UP    !~ /^\d+$/ or
     $L_DOWN  !~ /^\d+$/   ) {
     die "Invalid input [options]\n";
 }
-# OPTIONAL states
-if ($BRANCH !~ /^Y$/ and $BRANCH !~ /^NO$/) {die "Invalid BRANCH input [options]\n";}
 
 # Get Training set Filename without File handle
 my ($taxa)  = $GFF =~ /\/?(\w+\.*\w+\d*)\.gff$/;
@@ -111,10 +110,10 @@ for (my $i=0; $i < $sets; $i++) {
 	
 	my $gff_fh = "./$taxa\_train$i\.gff";
 	my $fa_fh  = "./$taxa\_train$i\.fa";
+	my $hmm_fh = "./$taxa\_train$i\.hmm";
 	if (!-d $em_path) {
 		my $cmd = "run_hmmgen.pl";
-		$cmd   .= " -b $BRANCH" if $BRANCH =~ /^Y$/;
-		$cmd   .= " -D $L_DON -A $L_ACCEP -U $L_UP -E $L_DOWN";
+		$cmd   .= " -b " if $opt_B;
 		$cmd   .= " $gff_fh $fa_fh";
 		`$cmd`;
 # 		print "\t$em_path\tDIRECTORY CREATED\n";
@@ -125,9 +124,9 @@ for (my $i=0; $i < $sets; $i++) {
 	my $cmd = "hmm_assmbl.pl";
 	$cmd   .= " -D $L_DON -A $L_ACCEP -U $L_UP -E $L_DOWN";
 	$cmd   .= " -5 $UP -m $START -c $EXON -d $DON -i $INTRON -a $ACCEP -s $STOP";
-	$cmd   .= " -b $BRANCH" if $BRANCH =~ /^Y$/;
+	$cmd   .= " -B -b $BRANCH" if $opt_B;
 	$cmd   .= " $gff_fh $fa_fh";
-	`$cmd`;
+	`$cmd > $hmm_fh`;
 # 	print "\t$cmd\n\n";
 }
 
@@ -147,7 +146,7 @@ my $exp_gff   = "$taxa\_exp.gff";
 `touch $exp_gff`;
 
 foreach my $fh (glob("./$taxa\_*\.hmm")) {
-	my ($set, $st_quant) = $fh =~ /\.\/$taxa\_train(\d+)_(\d+)\.hmm/;
+	my ($set) = $fh =~ /\.\/$taxa\_train(\d+)\.hmm/;
 	my $test_fa  = "$taxa\_test$set\.fa";
 	my $test_gff = "$taxa\_test$set\.gff";
 	`genesmith $fh $test_fa >> $output_fh`;
@@ -171,6 +170,7 @@ my $cds_counts = $eval_stats[2];
 my $kog_counts = $eval_stats[3];
 
 my $opt_info = "> -U $L_UP -E $L_DOWN -D $L_DON -A $L_ACCEP -5 $UP -m $START -c $EXON -d $DON -i $INTRON -a $ACCEP -s $STOP -3 $DOWN";
+$opt_info   .= " -B -b $BRANCH" if $opt_B;
 print $opt_info,   "\n";
 print $taxa,       "\t";
 print $nuc_stats,  "\t\n";

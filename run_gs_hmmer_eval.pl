@@ -19,8 +19,8 @@ my $ACCEP       = 0;     # Order Acceptor, ends with canonical AG, length = 2 + 
 my $STOP        = 0;     # Order Stop, starts with stop codon, length = 3 + order
 my $DOWN        = 0;     # Order Downstream
 my $BRANCH      = "NO";  # Order for the branch states created by <hmmgen_branch.pl>
-my $L_DON       = 2;     # Quantity of Donor States
-my $L_ACCEP     = 2;     # Quantity of Acceptor States 
+my $L_DON       = 5;     # Quantity of Donor States
+my $L_ACCEP     = 10;     # Quantity of Acceptor States 
 my $L_UP        = 500;   # Length of Upstream region parsed for training
 my $L_DOWN      = 500;   # Length of Downstream region parsed for training
 my $HMMER_COEFF = 1.0;
