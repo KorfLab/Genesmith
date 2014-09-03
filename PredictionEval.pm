@@ -83,14 +83,15 @@ sub calc_tpr{
 
 # Specificity(SPC)
 sub calc_spc{
-	my ($tn, $fp) = @_;
-	my $denom = $tn + $fp;
+	my ($tp, $fp) = @_;
+	my $denom = $tp + $fp;
 	
 	my $spc;
 	if ($denom == 0) {
 		$spc = 0;
 	} else {
-		$spc = $tn/($denom);
+		# Equation: TP/(TP + FP) => an alternative equation for gene finding
+		$spc = $tp/($denom);
 	}
 	return $spc;
 }

@@ -5,8 +5,8 @@ use STATE;
 use HMMstar;
 use DataBrowser;
 use Getopt::Std;
-use vars qw($opt_h $opt_1 $opt_S $opt_5 $opt_m $opt_c $opt_d $opt_i $opt_a $opt_s $opt_3 $opt_b $opt_B $opt_D $opt_A $opt_U $opt_E);
-getopts('h1S5:m:c:d:i:a:s:3:b:BD:A:U:E:');
+use vars qw($opt_h $opt_1 $opt_S $opt_t $opt_5 $opt_m $opt_c $opt_d $opt_i $opt_a $opt_s $opt_3 $opt_b $opt_B $opt_D $opt_A $opt_U $opt_E);
+getopts('h1St:5:m:c:d:i:a:s:3:b:BD:A:U:E:');
 
 # Change options to use Getopt::Long to allow an input of 0 for branch and polyA options
 # DEFAULT settings [options]
@@ -23,6 +23,7 @@ my $L_DON   = 5;     # Quantity of Donor States
 my $L_ACCEP = 10;    # Quantity of Acceptor States 
 my $L_UP    = 500;   # Length of Upstream region parsed for training
 my $L_DOWN  = 500;   # Length of Downstream region parsed for training
+my $TRANS   = 1.0;   # Weight multiplied to CDS transitions
 
 die "
 usage: $0 [options] <GFF> <FASTA>
@@ -42,6 +43,7 @@ universal parameters:
   -A <length>  Acceptor Site Length                       Default = $L_ACCEP
   -U <length>  upstream training                          Default = $L_UP
   -E <length>  downtream training                         Default = $L_DOWN
+  -t <digit>   Weight for CDS transitions                 Default = $TRANS
   -1           Convert for Standard to Basic HMM with 1 CDS state
   -S           Option to exclude start and stop states from basic model
   -h           help (format and details)
@@ -60,24 +62,26 @@ $L_DON   = $opt_D if $opt_D;
 $L_ACCEP = $opt_A if $opt_A;
 $L_UP    = $opt_U if $opt_U;
 $L_DOWN  = $opt_E if $opt_E;
+$TRANS   = $opt_t if $opt_t;
 
 my ($GFF, $FASTA) = @ARGV;
 
 # Sanity Check - options
-if ($START   !~ /^\d+$/ or
-    $DON     !~ /^\d+$/ or 
-    $ACCEP   !~ /^\d+$/ or
-    $STOP    !~ /^\d+$/ or
-    $UP      !~ /^\d+$/ or
-    $EXON    !~ /^\d+$/ or
-    $INTRON  !~ /^\d+$/ or
-    $DOWN    !~ /^\d+$/ or
-    $BRANCH  !~ /^\d+$/ or
-    $L_DON   !~ /^\d+$/ or
-    $L_ACCEP !~ /^\d+$/ or    
-    $L_UP    !~ /^\d+$/ or
-    $L_DOWN  !~ /^\d+$/ or
-    $opt_S and !$opt_1    ) {
+if ($START   !~ /^\d+$/    or
+    $DON     !~ /^\d+$/    or 
+    $ACCEP   !~ /^\d+$/    or
+    $STOP    !~ /^\d+$/    or
+    $UP      !~ /^\d+$/    or
+    $EXON    !~ /^\d+$/    or
+    $INTRON  !~ /^\d+$/    or
+    $DOWN    !~ /^\d+$/    or
+    $BRANCH  !~ /^\d+$/    or
+    $L_DON   !~ /^\d+$/    or
+    $L_ACCEP !~ /^\d+$/    or    
+    $L_UP    !~ /^\d+$/    or
+    $L_DOWN  !~ /^\d+$/    or
+    $TRANS   !~ /\d?.?\d+/ or
+    $opt_S and !$opt_1       ) {
     die "Invalid input [options]\n";
 }
 
@@ -343,10 +347,11 @@ for (my $i=0; $i < @states; $i++) {
 	# Iterate through transition labels
 	foreach my $label (@lb_list) {
 		if ($label =~ /0/ and $st =~ /GU/) {
-			my $total  = tot_trans(\%{$trans_freq{$label}});
-			my $t_prob = $trans_freq{$label}{$label}/$total;
-			$states[$i]->t_matrix($st, $t_prob);
-			$states[$i]->t_matrix($states[$i+1]->name, (1 - $t_prob));
+			my $total     = tot_trans(\%{$trans_freq{$label}});
+			my $t_prob    = $trans_freq{$label}{$label}/$total;
+			my $cds_trans = (1 - $t_prob)*$TRANS;
+			$states[$i]->t_matrix($st, (1 - $cds_trans));
+			$states[$i]->t_matrix($states[$i+1]->name, $cds_trans);
 		}
 		if ($label =~ /9/ and $st =~ /GD/) {
 			my $total  = tot_trans(\%{$trans_freq{$label}});

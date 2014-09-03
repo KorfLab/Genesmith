@@ -46,9 +46,8 @@ foreach my $id (keys %$exp) {
 			substr($lb_obs, $obs_start - 1, $obs_len) = "1" x $obs_len;
 		}
 	}
-	
 	my $bp_counts  = bp_eval($lb_exp, $lb_obs, $slen);
-	my $cds_counts = cds_eval($id, $lb_exp, $lb_obs, $cds_obs, $exp, $obs);
+	my $cds_counts = cds_eval($id, $lb_exp, $lb_obs, $exp, $obs);
 		
 	# Nucleotide Level Analysis
 	my $tp     = $bp_counts->{TP};
@@ -92,29 +91,25 @@ my $fp = $bp_sum->{false_pos};   # Total False Pos.
 my $fn = $bp_sum->{false_neg};   # Total False Neg.
 
 my $tpr = PredictionEval::calc_tpr($tp, $fn);           # Sensitivity
-my $spc = PredictionEval::calc_spc($tn, $fp);           # Specificity
-my $ppv = PredictionEval::calc_ppv($tp, $fp);           # Pos. Predictive Value
-my $npv = PredictionEval::calc_npv($tn, $fn);           # Neg. Predictive Value
-my $fdr = PredictionEval::calc_fdr($tp, $fp);           # False Discovery Rate
-my $fpr = PredictionEval::calc_fpr($tn, $fp);           # False Pos. Rate
+my $spc = PredictionEval::calc_spc($tp, $fp);           # Specificity
 my $acc = PredictionEval::calc_acc($tp, $tn, $fp, $fn); # Accuracy
 my $mcc = PredictionEval::calc_mcc($tp, $tn, $fp, $fn); # Matthews Correlation Coefficient
-printf "%.0f\t%.0f\t%.0f\t%.0f\n%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\n",
-        $tp, $tn, $fp, $fn, $mcc, $acc, $tpr, $spc, $ppv, $npv, $fdr, $fpr;
+printf "TP: %.0f\tTN: %.0f\tFP: %.0f\tFN: %.0f\nMCC: %.3f\tACC: %.3f\tTPR: %.3f\tSPC: %.3f\n",
+        $tp, $tn, $fp, $fn, $mcc, $acc, $tpr, $spc;
 
 # CDS level analysis
 my $cds_match = $cds_sum->{match};      # Complete Match
 my $cds_mm    = $cds_sum->{mismatch};   # Mismatch
 my $cds_miss  = $cds_sum->{missing};    # Missing
 my $tot_cds   = $cds_match + $cds_mm + $cds_miss;
-print $tot_cds, "\t", $cds_match, "\t", $cds_mm, "\t", $cds_miss, "\n";
+print "EXON:\t", $tot_cds, "\t", $cds_match, "\t", $cds_mm, "\t", $cds_miss, "\n";
 
 # Gene level analysis
 my $kog_match = $gene_sum->{match};      # Complete Match
 my $kog_mm    = $gene_sum->{mismatch};   # Mismatch
 my $kog_miss  = $gene_sum->{missing};    # Missing
 my $tot_kogs  = $kog_match + $kog_mm + $kog_miss;
-print $tot_kogs, "\t", $kog_match, "\t", $kog_mm, "\t", $kog_miss, "\n";
+print "GENE:\t", $tot_kogs, "\t", $kog_match, "\t", $kog_mm, "\t", $kog_miss, "\n";
 
 
 #===================================================================#
@@ -151,7 +146,7 @@ sub seq_lengths{
 	open (IN, "<$fh") or die "Error reading FASTA\n";
 	my $fasta = new FAlite(\*IN);
 	while (my $entry = $fasta->nextEntry) {
-		my ($id)   = $entry->def =~ /^>(\S+)$/;
+		my ($id)   = $entry->def =~ /^>(\S+)/;
 		$slen{$id} = length($entry->seq);
 	}
 	close IN;
@@ -176,11 +171,36 @@ sub bp_eval{
 
 # CDS Level Analysis
 sub cds_eval{
-	my ($id, $lb_exp, $lb_obs, $cds_obs, $exp, $obs) = @_;
+	my ($id, $lb_exp, $lb_obs, $exp, $obs) = @_;
 	my $cds_exp = scalar(@{$exp->{$id}});      # Expected quantity of CDS
-	my $first_cds = $exp->{$id}->[0]->[0];     # Start position of First CDS seq
-	my $last_cds  = $exp->{$id}->[-1]->[0];    # Start position of Last CDS seq
+	my $cds_obs = scalar(@{$obs->{$id}});      # Expected quantity of CDS
+	my $first_cds = $exp->{$id}[0][0];     # Start position of First CDS seq
+	my $last_cds  = $exp->{$id}[-1][0];    # Start position of Last CDS seq
 	my %counts;
+	
+	####### Revision
+# 	print ">>>$id\n";
+# 	my %coords;
+# 	for(my $i = 0; $i < $cds_exp; $i++) {
+# 		my $exp_coord       = "$exp->{$id}[$i][0]\..$exp->{$id}[$i][-1]";
+# 		print "exp: ", $exp_coord, "\n";
+# 		$coords{$exp_coord} = "TN";
+# 	}
+# 	if ($cds_obs == 0) {
+# 		
+# 	} else {
+# 		for(my $i = 0; $i < $cds_obs; $i++) {
+# 			my $obs_coord = "$obs->{$id}[$i][0]\..$obs->{$id}[$i][-1]";
+# 			if (defined $coords{$obs_coord}) {
+# 				print "obs: ", $obs_coord, "\n"; 
+# 				$coords{$obs_coord} = "TP";
+# 			} else {
+# 				$coords{$obs_coord} = "TN";
+# 			}
+# 		}
+# 	}
+# 	browse(\%coords);
+	#######
 	
 	#print $id, "\tEXP:  ", $cds_exp, "\tOBS:  ", scalar(@{$obs->{$id}}) 
 	
