@@ -14,7 +14,16 @@ my $gff1 = read_gff($file1);
 my $gff2 = read_gff($file2);
 
 # collect stats
-my (%gene, %nt, %exon, %intron, %acc, %don, %start, %stop);
+my %gene = init_counts();
+my %nt = init_counts();
+my %exon = init_counts();
+my %intron = init_counts();
+my %acc = init_counts();
+my %don = init_counts();
+my %start = init_counts();
+my %stop = init_counts();
+
+
 foreach my $sid (keys %$gff1) {
 
 	# exon
@@ -95,6 +104,9 @@ report("Stop", %stop);
 #################
 ## Subroutines ##
 #################
+sub init_counts {
+	return (match => 0, uni1 => 0, uni2 => 2);
+}
 
 sub nt_array {
 	my ($exons) = @_;
