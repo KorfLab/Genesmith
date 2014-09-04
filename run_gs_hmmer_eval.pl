@@ -89,9 +89,9 @@ if ($START       !~ /^\d+$/    or
     $L_ACCEP     !~ /^\d+$/    or    
     $L_UP        !~ /^\d+$/    or
     $L_DOWN      !~ /^\d+$/    or
-    $HMMER_COEFF !~ /\d?.?\d+/ or
-    $SW_COEFF    !~ /\d?.?\d+/ or
-    $TRANS       !~ /\d?.?\d+/ or
+#     $HMMER_COEFF !~ /\d?.?\d+/ or
+#     $SW_COEFF    !~ /\d?.?\d+/ or
+#     $TRANS       !~ /\d?.?\d+/ or
     $opt_S and !$opt_1           ) {
     die "Invalid input [options]\n";
 }

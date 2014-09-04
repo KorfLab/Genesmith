@@ -87,12 +87,12 @@ double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, 
 	
 	if (PROFILE != NULL or KOG_SEQ != NULL) {
 		char *aa_seq = translate(mrna);
-		for (int i = 0; i < strlen(aa_seq) -1; i++) {
-			if (aa_seq[i] == '*') {
-				printf("%s\n", aa_seq);
-				exit(1);
-			}
-		}
+// 		for (int i = 0; i < strlen(aa_seq) -1; i++) {
+// 			if (aa_seq[i] == '*') {
+// 				printf("%s\n", aa_seq);
+// 				exit(1);
+// 			}
+// 		}
 		double score = 0;
 		if (PROFILE != NULL) {
 			score += PSCALE * hmmer_score(ALPHABET, PROFILE, aa_seq);

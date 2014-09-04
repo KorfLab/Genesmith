@@ -23,7 +23,7 @@ my $L_DON   = 5;     # Quantity of Donor States
 my $L_ACCEP = 10;    # Quantity of Acceptor States 
 my $L_UP    = 500;   # Length of Upstream region parsed for training
 my $L_DOWN  = 500;   # Length of Downstream region parsed for training
-my $TRANS   = 1.0;   # Weight multiplied to CDS transitions
+my $TRANS   = 1.0;   # Weight multiplied to transitions between CDS and Donor states
 
 die "
 usage: $0 [options] <GFF> <FASTA>
@@ -80,7 +80,7 @@ if ($START   !~ /^\d+$/    or
     $L_ACCEP !~ /^\d+$/    or    
     $L_UP    !~ /^\d+$/    or
     $L_DOWN  !~ /^\d+$/    or
-    $TRANS   !~ /\d?.?\d+/ or
+#     $TRANS   !~ /\d?.?\d+/ or
     $opt_S and !$opt_1       ) {
     die "Invalid input [options]\n";
 }
@@ -349,9 +349,8 @@ for (my $i=0; $i < @states; $i++) {
 		if ($label =~ /0/ and $st =~ /GU/) {
 			my $total     = tot_trans(\%{$trans_freq{$label}});
 			my $t_prob    = $trans_freq{$label}{$label}/$total;
-			my $cds_trans = (1 - $t_prob)*$TRANS;
-			$states[$i]->t_matrix($st, (1 - $cds_trans));
-			$states[$i]->t_matrix($states[$i+1]->name, $cds_trans);
+			$states[$i]->t_matrix($st, $t_prob);
+			$states[$i]->t_matrix($states[$i+1]->name, (1 - $t_prob));
 		}
 		if ($label =~ /9/ and $st =~ /GD/) {
 			my $total  = tot_trans(\%{$trans_freq{$label}});
@@ -375,7 +374,7 @@ for (my $i=0; $i < @states; $i++) {
 			if ($pos == 2) {
 				my $tot_3trans  = $cds_trans + $don_trans + $stop_trans;
 				$states[$i]->t_matrix('cds0',   ($cds_trans/$tot_3trans));
-				$states[$i]->t_matrix('don0_2', ($don_trans/$tot_3trans));
+				$states[$i]->t_matrix('don0_2', ($don_trans/$tot_3trans)*$TRANS);
 				$states[$i]->t_matrix('stop0',  ($stop_trans/$tot_3trans));
 			} else {
 				my $tot_2trans  = $cds_trans + $don_trans;
@@ -383,7 +382,7 @@ for (my $i=0; $i < @states; $i++) {
 				$pos++;
 				my $cds_st = "cds$pos";
 				$states[$i]->t_matrix($cds_st, ($cds_trans/$tot_2trans));
-				$states[$i]->t_matrix($don_st, ($don_trans/$tot_2trans));
+				$states[$i]->t_matrix($don_st, ($don_trans/$tot_2trans)*$TRANS);
 			}
 		}
 		# Basic Model with 1 CDS state
@@ -395,7 +394,7 @@ for (my $i=0; $i < @states; $i++) {
 			my $total_trans = $cds_trans + $don_trans + $stop_trans;
 			$states[$i]->t_matrix('stop0', ($stop_trans/$total_trans));
 			$states[$i]->t_matrix($st,      ($cds_trans/$total_trans));
-			$states[$i]->t_matrix('don0_0', ($don_trans/$total_trans));
+			$states[$i]->t_matrix('don0_0', ($don_trans/$total_trans)*$TRANS);
 		}
 		
 		# Basic Model with 1 CDS state and no Start/Stop states
@@ -407,7 +406,7 @@ for (my $i=0; $i < @states; $i++) {
 			my $total_trans   = $cds_trans + $don_trans + $downstr_trans;
 			$states[$i]->t_matrix('GD0', ($downstr_trans/$total_trans));
 			$states[$i]->t_matrix($st,      ($cds_trans/$total_trans));
-			$states[$i]->t_matrix('don0_0', ($don_trans/$total_trans));
+			$states[$i]->t_matrix('don0_0', ($don_trans/$total_trans)*$TRANS);
 		}
 
 		
