@@ -5,7 +5,7 @@ use FAlite;
 use DataBrowser;
 use Getopt::Std;
 use vars qw($opt_h $opt_5 $opt_m $opt_c $opt_d $opt_i $opt_a $opt_s $opt_3 $opt_B $opt_b $opt_D $opt_A $opt_U $opt_E);
-getopts('h:5:m:c:d:i:a:s:3:Bb:D:A:U:E:');
+getopts('h5:m:c:d:i:a:s:3:Bb:D:A:U:E:');
 
 #==========================#
 # Genesmith Wrapper Script #
@@ -103,7 +103,7 @@ my $sets = 5;
 # Create HMMs #
 #-------------#
 my $PATH   = "./HMM/";
-# print ">>> Generating HMMs\n";
+print ">>> Generating HMMs\n";
 for (my $i=0; $i < $sets; $i++) {
 	my $file = "$taxa\_train$i";
 	my $em_path = $PATH . $file . "/";
@@ -116,9 +116,9 @@ for (my $i=0; $i < $sets; $i++) {
 		$cmd   .= " -b " if $opt_B;
 		$cmd   .= " $gff_fh $fa_fh";
 		`$cmd`;
-# 		print "\t$em_path\tDIRECTORY CREATED\n";
+		print "\t$em_path\tDIRECTORY CREATED\n";
 	} else {
-# 		print "\t$em_path\tDIRECTORY EXISTS\n";
+		print "\t$em_path\tDIRECTORY EXISTS\n";
 	}
 
 	my $cmd = "hmm_assmbl.pl";
@@ -134,7 +134,7 @@ for (my $i=0; $i < $sets; $i++) {
 #-------------------#
 # Running Genesmith #
 #-------------------#
-# print "\n>>> Running Genesmith\n";
+print "\n>>> Running Genesmith\n";
 my $output_fh = "$taxa\_pred.gff";
 my $exp_fa    = "$taxa\_exp.fa";
 my $exp_gff   = "$taxa\_exp.gff";
@@ -152,14 +152,14 @@ foreach my $fh (glob("./$taxa\_*\.hmm")) {
 	`genesmith $fh $test_fa >> $output_fh`;
 	`cat $test_fa  >> $exp_fa`;
 	`cat $test_gff >> $exp_gff`;
-# 	print "\tgenesmith $fh\ $test_fa\ >> $output_fh\n";
+	print "\tgenesmith $fh\ $test_fa\ >> $output_fh\n";
 }
 
 
 #----------------------------#
 # Evaluate Gene Predications #
 #----------------------------#
-# print "\n>>> Evaluate Predictions\n";
+print "\n>>> Evaluate Predictions\n";
 my $results = `evaluator.pl $exp_fa $exp_gff $output_fh`;
 chomp($results);
 
