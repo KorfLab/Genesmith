@@ -7,21 +7,21 @@ use DataBrowser;
 	
 die "usage: $0 <gff1> <gff2>\n" unless @ARGV == 2;
 
-# file1 = Expected, file2 = predicted
+# file1 = Expected GFF, file2 = Predicted GFF
 my ($file1, $file2) = @ARGV;
 
 my $gff1 = read_gff($file1);
 my $gff2 = read_gff($file2);
 
 # collect stats
-my %gene = init_counts();
-my %nt = init_counts();
-my %exon = init_counts();
+my %gene   = init_counts();
+my %nt     = init_counts();
+my %exon   = init_counts();
 my %intron = init_counts();
-my %acc = init_counts();
-my %don = init_counts();
-my %start = init_counts();
-my %stop = init_counts();
+my %acc    = init_counts();
+my %don    = init_counts();
+my %start  = init_counts();
+my %stop   = init_counts();
 
 
 foreach my $sid (keys %$gff1) {
