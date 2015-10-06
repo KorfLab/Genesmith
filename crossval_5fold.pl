@@ -120,24 +120,25 @@ my $sets = 5;
 # Create HMMs #
 #-------------#
 my $PATH   = "./HMM/";
+my $DIR    = "../Data/";  # Directory path where test and training sets are
 # print ">>> Generating HMMs\n";
 for (my $i=0; $i < $sets; $i++) {
 	my $file = "$taxa\_train$i";
 	my $em_path = $PATH . $file . "/";
 	
-	my $gff_fh = "./$taxa\_train$i\.gff";
-	my $fa_fh  = "./$taxa\_train$i\.fa";
+	my $gff_fh = "$DIR$taxa\_train$i\.gff";
+	my $fa_fh  = "$DIR$taxa\_train$i\.fa";
 	if (!-d $em_path) {
 		my $cmd = "run_hmmgen.pl";
 		$cmd   .= " -b " if $opt_B;
 		$cmd   .= " $gff_fh $fa_fh";
 		`$cmd`;
-# 		print "\t$em_path\tDIRECTORY CREATED\n";
+		print "\t$em_path\tDIRECTORY CREATED\n";
 	} else {
-# 		print "\t$em_path\tDIRECTORY EXISTS\n";
+		print "\t$em_path\tDIRECTORY EXISTS\n";
 	}
 
-	my $hmm_fh = "$taxa\_train$i\.hmm";
+	my $hmm_fh = "$taxa\_D$L_DON\-A$L_ACCEP\-U$L_UP\-E$L_DOWN\-5$UP\-m$START\-c$EXON\-d$DON\-i$INTRON\-a$ACCEP\-s$STOP\__$i\.hmm";	
 	my $cmd    = "hmm_assemble.pl";
 	$cmd      .= " -1"        if $opt_1 and !$opt_S;
 	$cmd      .= " -1S"       if $opt_1 and $opt_S;
@@ -165,10 +166,10 @@ my $exp_gff   = "$taxa\_exp.gff";
 `touch $exp_fa`;
 `touch $exp_gff`;
 
-foreach my $fh (glob("./$taxa\_*\.hmm")) {
-	my ($set)    = $fh =~ /\.\/$taxa\_train(\d+)\.hmm/;
-	my $test_fa  = "$taxa\_test$set\.fa";
-	my $test_gff = "$taxa\_test$set\.gff";
+for (my $i=0; $i < $sets; $i++) {
+	my $fh = "$taxa\_D$L_DON\-A$L_ACCEP\-U$L_UP\-E$L_DOWN\-5$UP\-m$START\-c$EXON\-d$DON\-i$INTRON\-a$ACCEP\-s$STOP\__$i\.hmm";
+	my $test_fa  = "$DIR$taxa\_test$i\.fa";
+	my $test_gff = "$DIR$taxa\_test$i\.gff";
 	my @kogs     = `grep ">" $test_fa`;
 	foreach my $kog (@kogs) {
 		chomp($kog);
@@ -184,7 +185,7 @@ foreach my $fh (glob("./$taxa\_*\.hmm")) {
 	}
 	`cat $test_fa  >> $exp_fa`;
 	`cat $test_gff >> $exp_gff`;
-# 	print "\tset:  ", $set, "\n";
+# 	print "\tset:  ", $i, "\n";
 }
 
 
@@ -204,6 +205,6 @@ foreach my $stat (@eval_stats) {
 }
 
 ### Remove Model Files
-my $model_fh = "$taxa\_train*.hmm";
+my $model_fh = "$taxa\_D$L_DON\-A$L_ACCEP\-U$L_UP\-E$L_DOWN\-5$UP\-m$START\-c$EXON\-d$DON\-i$INTRON\-a$ACCEP\-s$STOP\__*\.hmm";
 `rm $model_fh`;
 
