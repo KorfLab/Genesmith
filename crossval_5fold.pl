@@ -133,9 +133,9 @@ for (my $i=0; $i < $sets; $i++) {
 		$cmd   .= " -b " if $opt_B;
 		$cmd   .= " $gff_fh $fa_fh";
 		`$cmd`;
-		print "\t$em_path\tDIRECTORY CREATED\n";
+# 		print "\t$em_path\tDIRECTORY CREATED\n";
 	} else {
-		print "\t$em_path\tDIRECTORY EXISTS\n";
+# 		print "\t$em_path\tDIRECTORY EXISTS\n";
 	}
 
 	my $hmm_fh = "$taxa\_D$L_DON\-A$L_ACCEP\-U$L_UP\-E$L_DOWN\-5$UP\-m$START\-c$EXON\-d$DON\-i$INTRON\-a$ACCEP\-s$STOP\__$i\.hmm";	
