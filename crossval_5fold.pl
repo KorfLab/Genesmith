@@ -100,27 +100,18 @@ if ($START       !~ /^\d+$/    or
 my ($taxa)  = $GFF =~ /\/?(\w+\.*\w+\d*)\.gff$/;
 
 
-#----------------------------#
-# Get Test and Training Sets #
-#----------------------------#
-# print ">>> Creating TEST and TRAINING sets\n";
-#`test_train_sets.pl $GFF $FASTA`;
-
-# my $sets = 1;  # Stores Total number of Sets
-# foreach my $fh (glob("./$taxa\_*")) {
-# 	if ($fh =~ /test/) {
-# 		my ($set) = $fh =~ /_test(\d+)\.\w+/;
-# 		$sets = $set + 1 if $set >= $sets;
-# 	}
-# }
-# print "\t$sets sets\n\n";
-my $sets = 5;
-
 #-------------#
 # Create HMMs #
 #-------------#
-my $PATH   = "./HMM/";
-my $DIR    = "../Data/";  # Directory path where test and training sets are
+my $optinfo = "D$L_DON\-A$L_ACCEP\-U$L_UP\-E$L_DOWN\-5$UP\-m$START\-c$EXON\-d$DON\-i$INTRON\-a$ACCEP\-s$STOP\-3$DOWN";
+$optinfo   .= "\-1"  if $opt_1 and !$opt_S;
+$optinfo   .= "\-1S" if $opt_1 and $opt_S;
+$optinfo   .= "\-B-b$BRANCH" if $opt_B; 
+
+my $sets    = 5;           # Number of sets (5 sets for 5-fold cross validation)
+my $PATH    = "./HMM/";
+my $DIR     = "../Data/";  # Directory path where test and training sets are
+
 # print ">>> Generating HMMs\n";
 for (my $i=0; $i < $sets; $i++) {
 	my $file = "$taxa\_train$i";
@@ -138,13 +129,13 @@ for (my $i=0; $i < $sets; $i++) {
 # 		print "\t$em_path\tDIRECTORY EXISTS\n";
 	}
 
-	my $hmm_fh = "$taxa\_D$L_DON\-A$L_ACCEP\-U$L_UP\-E$L_DOWN\-5$UP\-m$START\-c$EXON\-d$DON\-i$INTRON\-a$ACCEP\-s$STOP\__$i\.hmm";	
+	my $hmm_fh = "$taxa\_$optinfo\__$i\.hmm";	
 	my $cmd    = "hmm_assemble.pl";
 	$cmd      .= " -1"        if $opt_1 and !$opt_S;
 	$cmd      .= " -1S"       if $opt_1 and $opt_S;
 	$cmd      .= " -t $TRANS" if $opt_t;
 	$cmd      .= " -D $L_DON -A $L_ACCEP -U $L_UP -E $L_DOWN";
-	$cmd      .= " -5 $UP -m $START -c $EXON -d $DON -i $INTRON -a $ACCEP -s $STOP";
+	$cmd      .= " -5 $UP -m $START -c $EXON -d $DON -i $INTRON -a $ACCEP -s $STOP -3 $DOWN";
 	$cmd      .= " -B -b $BRANCH" if $opt_B;
 	$cmd      .= " $gff_fh $fa_fh";
 	`$cmd > $hmm_fh`;
@@ -156,18 +147,18 @@ for (my $i=0; $i < $sets; $i++) {
 # Running Genesmith #
 #-------------------#
 # print "\n>>> Running Genesmith\n";
-my $output_fh = "$taxa\_pred.gff";
-my $exp_fa    = "$taxa\_exp.fa";
-my $exp_gff   = "$taxa\_exp.gff";
-`rm $output_fh` if -e $output_fh;
-`rm $exp_fa`    if -e $exp_fa;
-`rm $exp_gff`   if -e $exp_gff;
+my $output_fh = "$taxa\_$optinfo\_pred.gff";
+my $exp_fa    = "$taxa\_$optinfo\_exp.fa";
+my $exp_gff   = "$taxa\_$optinfo\_exp.gff";
+# `rm $output_fh` if -e $output_fh;
+# `rm $exp_fa`    if -e $exp_fa;
+# `rm $exp_gff`   if -e $exp_gff;
 `touch $output_fh`;
 `touch $exp_fa`;
 `touch $exp_gff`;
 
 for (my $i=0; $i < $sets; $i++) {
-	my $fh = "$taxa\_D$L_DON\-A$L_ACCEP\-U$L_UP\-E$L_DOWN\-5$UP\-m$START\-c$EXON\-d$DON\-i$INTRON\-a$ACCEP\-s$STOP\__$i\.hmm";
+	my $fh = "$taxa\_$optinfo\__$i\.hmm";
 	my $test_fa  = "$DIR$taxa\_test$i\.fa";
 	my $test_gff = "$DIR$taxa\_test$i\.gff";
 	my @kogs     = `grep ">" $test_fa`;
@@ -197,14 +188,15 @@ my $results = `eval_quick_compare.pl $exp_gff $output_fh`;
 chomp($results);
 
 my @eval_stats = split("\n", $results);
-my $opt_info = "> -U $L_UP -E $L_DOWN -D $L_DON -A $L_ACCEP -t $TRANS -5 $UP -m $START -c $EXON -d $DON -i $INTRON -a $ACCEP -s $STOP -3 $DOWN";
-print $opt_info,   "\n";
-print $taxa,       "\n";
+my $header     = ">$taxa\-$optinfo";
+print $header,   "\n";
 foreach my $stat (@eval_stats) {
 	print $stat, "\n";
 }
 
-### Remove Model Files
-my $model_fh = "$taxa\_D$L_DON\-A$L_ACCEP\-U$L_UP\-E$L_DOWN\-5$UP\-m$START\-c$EXON\-d$DON\-i$INTRON\-a$ACCEP\-s$STOP\__*\.hmm";
+### Remove Model and Prediction Files
+my $model_fh = "$taxa\_$optinfo\__*\.hmm";
 `rm $model_fh`;
-
+`rm $output_fh`;
+`rm $exp_fa`;
+`rm $exp_gff`;
