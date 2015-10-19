@@ -4,7 +4,7 @@ use warnings;
 use fatal;
 
 
-die "convert_ann_to_gff.pl <GFF>" unless @ARGV == 1;
+die "convert_ann_to_gff.pl <ZFF>" unless @ARGV == 1;
 my ($zff_file) = @ARGV;
 
 my %Feature = (
