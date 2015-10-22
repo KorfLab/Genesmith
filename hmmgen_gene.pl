@@ -81,7 +81,6 @@ my @st_label  = ('U',  'C',     'C',   'C',   'C',       'I',   'I',     'I',   
 my @st_quant  = ( 1,    3,       3,     1,     1,        $L_DON, 1,      $L_ACCEP, 3,      1);
 
 
-
 #---------------------------------------------------------#
 # Create Array of State Objects (or a multi-layered hash) #
 #---------------------------------------------------------#
@@ -139,6 +138,9 @@ foreach my $contig ($genome->contigs) {
 	}
 }
 
+# Sanity Check
+#browse(\%gene_struc);
+
 #--------------------------------#
 # Generate State Emission Counts #
 #--------------------------------#
@@ -167,7 +169,10 @@ foreach my $id (keys %gene_struc) {
 		
 		# 3 CDS states [Standard Model]
 		if ($st =~ /^cds/) {
-			$states[$s]->emission($st, $order, $CDS);
+			my $cds_str = "";
+			$cds_str    = substr($upstream, -($order -3), $order -3) if $order > 3;
+			$cds_str   .= $CDS; 
+			$states[$s]->emission($st, $order, $cds_str);
 		}
 		
 		# 1 CDS state [Basic Model]
@@ -251,7 +256,7 @@ foreach my $id (keys %gene_struc) {
 #-------------------------------------------------------------------------------------------#
 my $I_QUANT = 3;   # Number of copies generated for each Intron state
 
-# Create Output Directory
+#Create Output Directory
 my ($result_dir) = $GFF =~ /\/?(\w+\.*\w+\d*)\.gff$/;
 my $path = "./HMM/$result_dir\/";
 if (!-d $path) {
