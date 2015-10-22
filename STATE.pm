@@ -56,9 +56,13 @@ sub emission{
 	my ($self, $st, $order, $seq) = @_;
 	return $self->{emission} unless defined($st and $order and $seq);
 	
-	if ($st =~ /start|stop|don|accep|branch\d+/) {
+	if ($st =~ /start|stop|don|accep|branch/) {
 		my $pos;
-		($pos) = $st =~ /\w+(\d+)$/;
+		($pos) = $st =~ /start(\d+)/  if $st =~ /start\d+/;
+		($pos) = $st =~ /stop(\d+)/   if $st =~ /stop\d+/;
+		($pos) = $st =~ /don(\d+)/    if $st =~ /don\d+/;
+		($pos) = $st =~ /accep(\d+)/  if $st =~ /accep\d+/;
+		($pos) = $st =~ /branch(\d+)/ if $st =~ /branch\d+/;
 		my $ctx = uc substr($seq, $pos, $order);
 		my $nt = uc substr($seq, ($order + $pos), 1);
 		if ($ctx =~ /\S+/) {
@@ -68,7 +72,9 @@ sub emission{
 		}
 	} elsif ($st =~ /cds\d/) {
 		my ($phase) = $st =~ /cds(\d)/;
-		for (my $i = $phase; $i < (length($seq)/3); $i+=3) {
+		my $v = 3;
+		$v    = $order if $order > 3;
+		for (my $i = $phase+$v; $i < length($seq); $i+=3) {
 			if ($i >= $order) {
 				my $ctx = uc substr($seq, $i - $order, $order);
 				my $nt = uc substr($seq, $i, 1);
