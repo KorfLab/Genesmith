@@ -106,7 +106,9 @@ my ($taxa)  = $GFF =~ /\/?(\w+\.*\w+\d*)\.gff$/;
 my $optinfo = "D$L_DON\-A$L_ACCEP\-U$L_UP\-E$L_DOWN\-5$UP\-m$START\-c$EXON\-d$DON\-i$INTRON\-a$ACCEP\-s$STOP\-3$DOWN";
 $optinfo   .= "\-1"  if $opt_1 and !$opt_S;
 $optinfo   .= "\-1S" if $opt_1 and $opt_S;
-$optinfo   .= "\-B-b$BRANCH" if $opt_B; 
+$optinfo   .= "\-B-b$BRANCH"      if $opt_B; 
+$optinfo   .= "\-p-P$HMMER_COEFF" if $opt_p;
+$optinfo   .= "\-w-W$SW_COEFF"    if $opt_w;
 
 my $sets    = 5;           # Number of sets (5 sets for 5-fold cross validation)
 my $PATH    = "./HMM/";
