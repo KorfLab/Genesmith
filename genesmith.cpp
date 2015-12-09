@@ -24,7 +24,8 @@ extern "C" {
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h> 
+#include <math.h>
+#include <iomanip>
 
 /* GLOBAL variables */
 static ESL_ALPHABET    *ALPHABET = NULL; // Genomic Alphabet for StochHMM
@@ -107,6 +108,7 @@ double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, 
 	}
 }
 
+
 static void usage () {
 	std::cout
 		<< "usage: genesmith [options] <hmm file> <seq file>\n"
@@ -115,6 +117,7 @@ static void usage () {
 		<< "  -P <float> weight for profile HMM\n"
 		<< "  -s <file> protein for smith-waterman alignment\n"
 		<< "  -S <float> weight for smith-waterman\n" 
+		<< "  -V <size_t> number of repetitions used for Stochastic Viterbi, silence Viterbi"
 		<< "  -g <file> alternate genetic code\n"
 		<< std::endl;
 	exit(1);
@@ -133,22 +136,25 @@ int main (int argc, char ** argv) {
 	char  * phmm_coeff   = NULL;
 	char  * sw_coeff     = NULL;
 	char  * genetic_code = NULL;
-		
+    char  * repetitions  = NULL;
+	size_t reps(1000);   // for Stochastic Viterbi
+    
 	/* process command line */
-	while ((c = getopt(argc, argv, "g:p:P:s:S:h:")) != -1) {
+	while ((c = getopt(argc, argv, "g:p:P:s:S:V:h")) != -1) {
 		switch (c) {
 			case 'g': genetic_code = optarg; break;
 			case 'p': profile_file = optarg; break;
 			case 'P': phmm_coeff   = optarg; break;
 			case 's': protein_file = optarg; break;
 			case 'S': sw_coeff     = optarg; break;
+            case 'V': repetitions  = optarg; break;
 			case 'h': usage();
 			default:  usage();
 		}
 	}
-	if (sw_coeff   != NULL) {ASCALE = atof(sw_coeff);}
-	if (phmm_coeff != NULL) {PSCALE = atof(phmm_coeff);}
-	
+	if (sw_coeff    != NULL) {ASCALE = atof(sw_coeff);}
+	if (phmm_coeff  != NULL) {PSCALE = atof(phmm_coeff);}
+    if (repetitions != NULL) {reps  = atoi(repetitions);}
 	
 	if (argc - optind != 2) usage();
 	std::string hmm_file = argv[optind];   // Gene Model for StochHMM
@@ -195,103 +201,212 @@ int main (int argc, char ** argv) {
 	hmm.import(hmm_file, &my_trans);
 	jobs.loadSeqs(hmm, seq_file);
 	StochHMM::seqJob *job=jobs.getJob();
-	std::vector<StochHMM::gff_feature> feat;
+	std::vector<StochHMM::gff_feature> feat;  // Vector for processing GFF output (Viterbi only)
 	
 	std::string prev_st = "none";
 	std::string start_id;
 	std::string end_id;
 	size_t cds_start(0);
 	size_t cds_end(0);
-	
+    double perc_reps(0);  // for Stochastic Viterbi
+    
 	while (job != NULL) {
 		StochHMM::trellis trell(&hmm, job->getSeqs());
-		trell.viterbi();
-		StochHMM::traceback_path tb(&hmm);
-		trell.traceback(tb);
-		tb.gff(feat, job->getSeqs()->getHeader());
-		for (size_t i=0; i < feat.size(); i++) {
-			std::string st = feat[i].feature;
-			std::string id  = feat[i].seqname;
-			if (id.substr(0,1) == ">") {id.erase(0,1);}
+		
+		if (repetitions != NULL) {
+			// Stochastic Viterbi ---------------------------------------------
+			trell.simple_stochastic_viterbi();
+			std::map<StochHMM::traceback_path, int > paths;
+			for(size_t i=0;i<reps;i++){
+				StochHMM::traceback_path pth(&hmm);
+				trell.stochastic_traceback(pth);
+				paths[pth]++;
+			}
+		
+			size_t path_count(0);   // Helps keeps track of which gene isoforms you are on
+			std::map<StochHMM::traceback_path,int>::iterator it;
+			for( it =paths.begin(); it!=paths.end();it++){
+				int count = (*it).second;
+				StochHMM::traceback_path tb = (*it).first;
+				//(*it).first.print_gff(job->getSeqs()->getHeader());
 			
-			/* Standard Model 3 CDS states */
-			if (prev_st == "GU0" and st == "start0") {
-				start_id  = id;
-				cds_start = feat[i].start;
-			}
-			if (prev_st.substr(0,3) == "cds" and st.substr(0,3) == "don") {
-				cds_end = feat[i].end -1;
-				std::cout   << id.substr(0,7)  << "\t" 
-						    << feat[i].source  << "\t" 
-						    << "CDS"           << "\t"
-						    << cds_start       << "\t"
-						    << cds_end         << "\t"
-						    << feat[i].score   << "\t"
-						    << feat[i].strand  << "\t"
-						    << id.substr(0,7)  << "\n";
-			}
-			if (prev_st.substr(0,5) == "accep" and st.substr(0,3) == "cds") {
-				cds_start = feat[i].start;
-			}
-			if (prev_st == "stop1" and st == "stop2") {
-				end_id  = id;
-				cds_end = feat[i].end;
-				if (start_id == end_id) {
-					std::cout << id.substr(0,7)  << "\t" 
-						      << feat[i].source  << "\t" 
-						      << "CDS"           << "\t"
-						      << cds_start       << "\t"
-						      << cds_end         << "\t"
-						      << feat[i].score   << "\t"
-						      << feat[i].strand  << "\t"
-						      << id.substr(0,7)  << "\n";
+				std::vector<StochHMM::gff_feature> svfeat;
+				tb.gff(svfeat, job->getSeqs()->getHeader());
+				for (size_t i=0; i < svfeat.size(); i++) {
+					std::string st = svfeat[i].feature;
+					std::string id = svfeat[i].seqname;
+					if (id.substr(0,1) == ">") {id.erase(0,1);}
+					perc_reps = ((double)count / reps) * 100;
+				
+					if (prev_st == "GU0" and st == "start0") {
+						start_id  = id;
+						cds_start = svfeat[i].start;
+					}
+					if (prev_st.substr(0,3) == "cds" and st.substr(0,3) == "don") {
+						cds_end = svfeat[i].end -1;
+						std::cout << id.substr(0,7)   << "\t"
+								<< svfeat[i].source << "\t"
+								<< "CDS"            << "\t"
+								<< cds_start        << "\t"
+								<< cds_end          << "\t"
+								<< svfeat[i].score  << "\t"
+								<< svfeat[i].strand << "\t"
+								<< id.substr(0,7)  << "." << path_count << ":percentage_reps=" <<  std::fixed << std::setprecision(3) << perc_reps << "%\n";
+					}
+					if (prev_st.substr(0,5) == "accep" and st.substr(0,3) == "cds") {
+						cds_start = svfeat[i].start;
+					}
+					if (prev_st == "stop1" and st == "stop2") {
+						end_id  = id;
+						cds_end = svfeat[i].end;
+						if (start_id == end_id) {
+							std::cout << id.substr(0,7)   << "\t"
+							<< svfeat[i].source << "\t"
+							<< "CDS"            << "\t"
+							<< cds_start        << "\t"
+							<< cds_end          << "\t"
+							<< svfeat[i].score  << "\t"
+							<< svfeat[i].strand << "\t"
+							<< id.substr(0,7)  << "." << path_count << ":percentage_reps="  << std::fixed << std::setprecision(3) << perc_reps << "%\n";
+						}
+					}
+					// Basic Model 1 CDS state
+					if (prev_st.substr(0,3) == "CDS" and st.substr(0,3) == "don") {
+						cds_end = svfeat[i].end -1;
+						std::cout << id.substr(0,7)   << "\t"
+						<< svfeat[i].source << "\t"
+						<< "CDS"            << "\t"
+						<< cds_start        << "\t"
+						<< cds_end          << "\t"
+						<< svfeat[i].score  << "\t"
+						<< svfeat[i].strand << "\t"
+						<< id.substr(0,7)  << "." << path_count << ":percentage_reps=" <<  std::fixed << std::setprecision(3) << perc_reps << "%\n";
+					}
+					if (prev_st.substr(0,5) == "accep" and st.substr(0,3) == "CDS") {
+						cds_start = svfeat[i].start;
+					}
+				
+					// Basic Model 1 CDS state with no Start/Stop States
+					if (prev_st == "GU0" and st == "CDSfull0") {
+						start_id  = id;
+						cds_start = svfeat[i].start;
+					}
+					if (prev_st.substr(0,5) == "accep" and st == "CDSfull0") {
+						cds_start = svfeat[i].start;
+					}
+					if (prev_st == "CDSfull0" and st == "GD0") {
+						end_id  = id;
+						cds_end = svfeat[i].end -1;
+						if (start_id == end_id) {
+							std::cout << id.substr(0,7)   << "\t"
+							<< svfeat[i].source << "\t"
+							<< "CDS"            << "\t"
+							<< cds_start        << "\t"
+							<< cds_end          << "\t"
+							<< svfeat[i].score  << "\t"
+							<< svfeat[i].strand << "\t"
+							<< id.substr(0,7)  << "." << path_count << ":percentage_reps=" << std::fixed << std::setprecision(3) << perc_reps << "%\n";
+						}
+					}
+				
+					prev_st = st;
 				}
+				svfeat.clear();
+				path_count++;
 			}
-			
-			/* Basic Model 1 CDS state */
-			if (prev_st.substr(0,3) == "CDS" and st.substr(0,3) == "don") {
-				cds_end = feat[i].end -1;
-				std::cout   << id.substr(0,7)  << "\t" 
-						    << feat[i].source  << "\t" 
-						    << "CDS"           << "\t"
-						    << cds_start       << "\t"
-						    << cds_end         << "\t"
-						    << feat[i].score   << "\t"
-						    << feat[i].strand  << "\t"
-						    << id.substr(0,7)  << "\n";
-			}
-			if (prev_st.substr(0,5) == "accep" and st.substr(0,3) == "CDS") {
-				cds_start = feat[i].start;
-			}
+        } else {
+			// Viterbi ------------------------------------------------------
+			trell.viterbi();
+			StochHMM::traceback_path tb(&hmm);
+			trell.traceback(tb);
+			tb.gff(feat, job->getSeqs()->getHeader());
+		
+			for (size_t i=0; i < feat.size(); i++) {
+				std::string st = feat[i].feature;
+				std::string id  = feat[i].seqname;
+				if (id.substr(0,1) == ">") {id.erase(0,1);}
+		
+				// Standard Model 3 CDS states
+				if (prev_st == "GU0" and st == "start0") {
+					start_id  = id;
+					cds_start = feat[i].start;
+				}
+				if (prev_st.substr(0,3) == "cds" and st.substr(0,3) == "don") {
+					cds_end = feat[i].end -1;
+					std::cout   << id.substr(0,7)  << "\t" 
+								<< feat[i].source  << "\t" 
+								<< "CDS"           << "\t"
+								<< cds_start       << "\t"
+								<< cds_end         << "\t"
+								<< feat[i].score   << "\t"
+								<< feat[i].strand  << "\t"
+								<< id.substr(0,7)  << "\n";
+				}
+				if (prev_st.substr(0,5) == "accep" and st.substr(0,3) == "cds") {
+					cds_start = feat[i].start;
+				}
+				if (prev_st == "stop1" and st == "stop2") {
+					end_id  = id;
+					cds_end = feat[i].end;
+					if (start_id == end_id) {
+						std::cout << id.substr(0,7)  << "\t" 
+								  << feat[i].source  << "\t" 
+								  << "CDS"           << "\t"
+								  << cds_start       << "\t"
+								  << cds_end         << "\t"
+								  << feat[i].score   << "\t"
+								  << feat[i].strand  << "\t"
+								  << id.substr(0,7)  << "\n";
+					}
+				}
+		
+				// Basic Model 1 CDS state
+				if (prev_st.substr(0,3) == "CDS" and st.substr(0,3) == "don") {
+					cds_end = feat[i].end -1;
+					std::cout   << id.substr(0,7)  << "\t" 
+								<< feat[i].source  << "\t" 
+								<< "CDS"           << "\t"
+								<< cds_start       << "\t"
+								<< cds_end         << "\t"
+								<< feat[i].score   << "\t"
+								<< feat[i].strand  << "\t"
+								<< id.substr(0,7)  << "\n";
+				}
+				if (prev_st.substr(0,5) == "accep" and st.substr(0,3) == "CDS") {
+					cds_start = feat[i].start;
+				}
 
-			/* Basic Model 1 CDS state with no Start/Stop States */
-			if (prev_st == "GU0" and st == "CDSfull0") {
-				start_id  = id;
-				cds_start = feat[i].start;
-			}
-			if (prev_st.substr(0,5) == "accep" and st == "CDSfull0") {
-				cds_start = feat[i].start;
-			}
-			if (prev_st == "CDSfull0" and st == "GD0") {
-				end_id  = id;
-				cds_end = feat[i].end -1;
-				if (start_id == end_id) {
-					std::cout << id.substr(0,7)  << "\t" 
-						      << feat[i].source  << "\t" 
-						      << "CDS"           << "\t"
-						      << cds_start       << "\t"
-						      << cds_end         << "\t"
-						      << feat[i].score   << "\t"
-						      << feat[i].strand  << "\t"
-						      << id.substr(0,7)  << "\n";
+				// Basic Model 1 CDS state with no Start/Stop States
+				if (prev_st == "GU0" and st == "CDSfull0") {
+					start_id  = id;
+					cds_start = feat[i].start;
 				}
-			}
-			prev_st = st;
-		}
-// 		tb.print_gff(job->getHeader());
+				if (prev_st.substr(0,5) == "accep" and st == "CDSfull0") {
+					cds_start = feat[i].start;
+				}
+				if (prev_st == "CDSfull0" and st == "GD0") {
+					end_id  = id;
+					cds_end = feat[i].end -1;
+					if (start_id == end_id) {
+						std::cout << id.substr(0,7)  << "\t" 
+								  << feat[i].source  << "\t" 
+								  << "CDS"           << "\t"
+								  << cds_start       << "\t"
+								  << cds_end         << "\t"
+								  << feat[i].score   << "\t"
+								  << feat[i].strand  << "\t"
+								  << id.substr(0,7)  << "\n";
+					}
+				}
+				prev_st = st;
+			}       
+        }
+// 		tb.print_gff(job->getHeader());               // Viterbi: Single entry print
+//        paths.print_gff(job->getSeqs()->getHeader()); // Stochastic Viterbi: Single entry print
 		job = jobs.getJob();
 		feat.clear();
-	}
+	}	
+	
 	/* Global Cleanup */
 	if (PROFILE != NULL) {
 		p7_hmm_Destroy(PROFILE);
@@ -301,6 +416,4 @@ int main (int argc, char ** argv) {
 	
 // 	printf("%d tb_eval functions called\n", FCOUNT);
 }
-
-
 
