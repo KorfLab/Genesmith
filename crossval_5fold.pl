@@ -70,7 +70,7 @@ $L_ACCEP     = $opt_A if $opt_A;
 $L_UP        = $opt_U if $opt_U;
 $L_DOWN      = $opt_E if $opt_E;
 $HMMER_COEFF = $opt_P if $opt_P;
-$SW_COEFF    = $opt_S if $opt_W;
+$SW_COEFF    = $opt_W if $opt_W;
 $TRANS       = $opt_t if $opt_t;
 
 my ($GFF, $FASTA) = @ARGV;
@@ -89,8 +89,8 @@ if ($START       !~ /^\d+$/    or
     $L_ACCEP     !~ /^\d+$/    or    
     $L_UP        !~ /^\d+$/    or
     $L_DOWN      !~ /^\d+$/    or
-#     $HMMER_COEFF !~ /\d?.?\d+/ or
-#     $SW_COEFF    !~ /\d?.?\d+/ or
+    $HMMER_COEFF !~ /\d?.?\d+/ or
+    $SW_COEFF    !~ /\d?.?\d+/ or
 #     $TRANS       !~ /\d?.?\d+/ or
     $opt_S and !$opt_1           ) {
     die "Invalid input [options]\n";
