@@ -25,7 +25,11 @@ my %stop   = init_counts();
 
 
 foreach my $sid (keys %$gff1) {
-
+	# If no prediction was generated 0 counts are added to the sum (across all categories)
+	if (!defined $gff2->{$sid}) {
+		next;
+	}
+	
 	# exon
 	my (@exon1, @exon2);
 	foreach my $exon (@{$gff1->{$sid}{exon}}) {push @exon1, stringify($exon)}
