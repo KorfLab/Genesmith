@@ -41,7 +41,7 @@ char* translate (const std::string *mrna) {
 	return ik_translate(seq, 1);
 }
 
-static float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, const char *aa_seq) {
+static float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, const char *aa_seq, size_t pos) {
 // 	char *seq = (char*)aa_seq.c_str();   // Convert string into char array
 		
 	P7_BG        *bg     = NULL; /* background */
@@ -61,7 +61,7 @@ static float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, co
 	
 	/* profile */
 	gm = p7_profile_Create(PROFILE->M, ALPHABET);
-	p7_ProfileConfig(PROFILE, bg, gm, L, p7_GLOCAL);
+	p7_ProfileConfig(PROFILE, bg, gm, L, p7_LOCAL);  // p7_GLOCAL used previously and had errors
 	
 	/* viterbi */
 	mx = p7_gmx_Create(gm->M, L);
@@ -84,23 +84,44 @@ static float hmmer_score(const ESL_ALPHABET *ALPHABET, const P7_HMM *PROFILE, co
 }
 
 double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, size_t tb) {
-// 	if (FCOUNT++ % 1000 == 1) fprintf(stderr, ".");
+	ik_align align;
+	char *sub_kogseq;
 	
 	if (PROFILE != NULL or KOG_SEQ != NULL) {
 		char *aa_seq = translate(mrna);
-// 		for (int i = 0; i < strlen(aa_seq) -1; i++) {
-// 			if (aa_seq[i] == '*') {
-// 				printf("%s\n", aa_seq);
-// 				exit(1);
-// 			}
-// 		}
 		double score = 0;
+		
 		if (PROFILE != NULL) {
-			score += PSCALE * hmmer_score(ALPHABET, PROFILE, aa_seq);
+			score += PSCALE * hmmer_score(ALPHABET, PROFILE, aa_seq, pos);
 		}
+		
 		if (KOG_SEQ != NULL) {
-			score += ASCALE * sw_mat_linear(aa_seq, KOG_SEQ, 62);
+// 			printf("KOG: %s\n", KOG_SEQ);
+// 			printf("AA: %s\n", aa_seq);
+			int seqlen = strlen(aa_seq);
+			int koglen = strlen(KOG_SEQ);
+			sub_kogseq = (char*)std::malloc(strlen(aa_seq) + 1);
+			std::strncpy(sub_kogseq, KOG_SEQ, seqlen);
+			sub_kogseq[seqlen] = '\0';
+// 			printf ("SUB: %s\n\n", sub_kogseq);			
+			if (seqlen + 1 <= koglen) {			
+				align = sw_mat(aa_seq, (char*)sub_kogseq, 62);
+				score -= 0.01 * align->score;
+				//printf("%f %s\n", score, align->alignment);
+			} else {
+				align = sw_mat(aa_seq, KOG_SEQ, 62);
+				score -= 0.01 * align->score;
+				//printf("%f %s\n", score, align->alignment);
+			}
+			//Original Method
+// 			align = sw_mat(aa_seq, KOG_SEQ, 62);
+// 			score -= 0.01 * align->score;
+			
+			ik_align_free(align);
+			
+			free(sub_kogseq);
 		}
+		
 		free(aa_seq);
 		return score;
 	} else {
@@ -138,6 +159,8 @@ int main (int argc, char ** argv) {
 	char  * genetic_code = NULL;
     char  * repetitions  = NULL;
 	size_t reps(1000);   // for Stochastic Viterbi
+	ik_pipe pipe;
+	ik_fasta fasta;
     
 	/* process command line */
 	while ((c = getopt(argc, argv, "g:p:P:s:S:V:h")) != -1) {
@@ -159,8 +182,15 @@ int main (int argc, char ** argv) {
 	if (argc - optind != 2) usage();
 	std::string hmm_file = argv[optind];   // Gene Model for StochHMM
 	std::string seq_file = argv[optind+1]; // KOG genomic DNA sequence
+	
+	
 		
 	if (protein_file != NULL) {
+		pipe = ik_pipe_open(protein_file, "r");
+		fasta = ik_fasta_read(pipe->stream);
+		KOG_SEQ = fasta->seq;
+	
+	/*
 		std::ifstream aa_file;
 		std::string protein_seq;
 		std::string line;
@@ -172,7 +202,9 @@ int main (int argc, char ** argv) {
 			}
 		}
 		aa_file.close();
+		
 		KOG_SEQ = (char*)protein_seq.c_str();
+	*/
 	}
 	
 	/* Setup HMMER Profile */
@@ -183,7 +215,8 @@ int main (int argc, char ** argv) {
 		if (p7_hmmfile_Read(hfp, &ALPHABET, &PROFILE) != eslOK)
 			p7_Fail("Failed to read HMM");
 		p7_hmmfile_Close(hfp);
-	} 
+	}
+	
 	
 	/* create alphabet */
 	std::vector<std::string> dna;
@@ -192,16 +225,18 @@ int main (int argc, char ** argv) {
 	dna.push_back("G");
 	dna.push_back("T");
 	StochHMM::track tr = dna;	
-		
+	
 	/* decode & output */
 	StochHMM::StateFuncs my_trans;
 	StochHMM::model hmm;
 	StochHMM::seqTracks jobs;
 	my_trans.assignTransitionFunction("TRANSLATE", *tb_eval);
+	
 	hmm.import(hmm_file, &my_trans);
 	jobs.loadSeqs(hmm, seq_file);
 	StochHMM::seqJob *job=jobs.getJob();
 	std::vector<StochHMM::gff_feature> feat;  // Vector for processing GFF output (Viterbi only)
+	
 	
 	std::string prev_st = "none";
 	std::string start_id;
@@ -244,14 +279,14 @@ int main (int argc, char ** argv) {
 					}
 					if (prev_st.substr(0,3) == "cds" and st.substr(0,3) == "don") {
 						cds_end = svfeat[i].end -1;
-						std::cout << id.substr(0,7)   << "\t"
+						std::cout << id             << "\t"
 								<< svfeat[i].source << "\t"
 								<< "CDS"            << "\t"
 								<< cds_start        << "\t"
 								<< cds_end          << "\t"
 								<< svfeat[i].score  << "\t"
 								<< svfeat[i].strand << "\t"
-								<< id.substr(0,7)  << "." << path_count << ":percentage_reps=" <<  std::fixed << std::setprecision(3) << perc_reps << "%\n";
+								<< id               << "." << path_count << ":percentage_reps=" <<  std::fixed << std::setprecision(3) << perc_reps << "%\n";
 					}
 					if (prev_st.substr(0,5) == "accep" and st.substr(0,3) == "cds") {
 						cds_start = svfeat[i].start;
@@ -260,27 +295,27 @@ int main (int argc, char ** argv) {
 						end_id  = id;
 						cds_end = svfeat[i].end;
 						if (start_id == end_id) {
-							std::cout << id.substr(0,7)   << "\t"
+							std::cout << id     << "\t"
 							<< svfeat[i].source << "\t"
 							<< "CDS"            << "\t"
 							<< cds_start        << "\t"
 							<< cds_end          << "\t"
 							<< svfeat[i].score  << "\t"
 							<< svfeat[i].strand << "\t"
-							<< id.substr(0,7)  << "." << path_count << ":percentage_reps="  << std::fixed << std::setprecision(3) << perc_reps << "%\n";
+							<< id               << "." << path_count << ":percentage_reps="  << std::fixed << std::setprecision(3) << perc_reps << "%\n";
 						}
 					}
 					// Basic Model 1 CDS state
 					if (prev_st.substr(0,3) == "CDS" and st.substr(0,3) == "don") {
 						cds_end = svfeat[i].end -1;
-						std::cout << id.substr(0,7)   << "\t"
+						std::cout << id     << "\t"
 						<< svfeat[i].source << "\t"
 						<< "CDS"            << "\t"
 						<< cds_start        << "\t"
 						<< cds_end          << "\t"
 						<< svfeat[i].score  << "\t"
 						<< svfeat[i].strand << "\t"
-						<< id.substr(0,7)  << "." << path_count << ":percentage_reps=" <<  std::fixed << std::setprecision(3) << perc_reps << "%\n";
+						<< id               << "." << path_count << ":percentage_reps=" <<  std::fixed << std::setprecision(3) << perc_reps << "%\n";
 					}
 					if (prev_st.substr(0,5) == "accep" and st.substr(0,3) == "CDS") {
 						cds_start = svfeat[i].start;
@@ -298,14 +333,14 @@ int main (int argc, char ** argv) {
 						end_id  = id;
 						cds_end = svfeat[i].end -1;
 						if (start_id == end_id) {
-							std::cout << id.substr(0,7)   << "\t"
+							std::cout << id     << "\t"
 							<< svfeat[i].source << "\t"
 							<< "CDS"            << "\t"
 							<< cds_start        << "\t"
 							<< cds_end          << "\t"
 							<< svfeat[i].score  << "\t"
 							<< svfeat[i].strand << "\t"
-							<< id.substr(0,7)  << "." << path_count << ":percentage_reps=" << std::fixed << std::setprecision(3) << perc_reps << "%\n";
+							<< id               << "." << path_count << ":percentage_reps=" << std::fixed << std::setprecision(3) << perc_reps << "%\n";
 						}
 					}
 				
@@ -325,7 +360,11 @@ int main (int argc, char ** argv) {
 				std::string st = feat[i].feature;
 				std::string id  = feat[i].seqname;
 				if (id.substr(0,1) == ">") {id.erase(0,1);}
-		
+				
+				// DEBUG
+				//std::cout << i << "\t" << st << "\t" << feat[i].start << "\t" << feat[i].end << "\n";
+				//======
+				
 				// Standard Model 3 CDS states
 				if (prev_st == "GU0" and st == "start0") {
 					start_id  = id;
@@ -333,14 +372,14 @@ int main (int argc, char ** argv) {
 				}
 				if (prev_st.substr(0,3) == "cds" and st.substr(0,3) == "don") {
 					cds_end = feat[i].end -1;
-					std::cout   << id.substr(0,7)  << "\t" 
+					std::cout   << id              << "\t" 
 								<< feat[i].source  << "\t" 
 								<< "CDS"           << "\t"
 								<< cds_start       << "\t"
 								<< cds_end         << "\t"
 								<< feat[i].score   << "\t"
 								<< feat[i].strand  << "\t"
-								<< id.substr(0,7)  << "\n";
+								<< id              << "\n";
 				}
 				if (prev_st.substr(0,5) == "accep" and st.substr(0,3) == "cds") {
 					cds_start = feat[i].start;
@@ -349,28 +388,28 @@ int main (int argc, char ** argv) {
 					end_id  = id;
 					cds_end = feat[i].end;
 					if (start_id == end_id) {
-						std::cout << id.substr(0,7)  << "\t" 
+						std::cout << id              << "\t" 
 								  << feat[i].source  << "\t" 
 								  << "CDS"           << "\t"
 								  << cds_start       << "\t"
 								  << cds_end         << "\t"
 								  << feat[i].score   << "\t"
 								  << feat[i].strand  << "\t"
-								  << id.substr(0,7)  << "\n";
+								  << id              << "\n";
 					}
 				}
 		
 				// Basic Model 1 CDS state
 				if (prev_st.substr(0,3) == "CDS" and st.substr(0,3) == "don") {
 					cds_end = feat[i].end -1;
-					std::cout   << id.substr(0,7)  << "\t" 
+					std::cout   << id              << "\t" 
 								<< feat[i].source  << "\t" 
 								<< "CDS"           << "\t"
 								<< cds_start       << "\t"
 								<< cds_end         << "\t"
 								<< feat[i].score   << "\t"
 								<< feat[i].strand  << "\t"
-								<< id.substr(0,7)  << "\n";
+								<< id              << "\n";
 				}
 				if (prev_st.substr(0,5) == "accep" and st.substr(0,3) == "CDS") {
 					cds_start = feat[i].start;
@@ -388,14 +427,14 @@ int main (int argc, char ** argv) {
 					end_id  = id;
 					cds_end = feat[i].end -1;
 					if (start_id == end_id) {
-						std::cout << id.substr(0,7)  << "\t" 
+						std::cout << id              << "\t" 
 								  << feat[i].source  << "\t" 
 								  << "CDS"           << "\t"
 								  << cds_start       << "\t"
 								  << cds_end         << "\t"
 								  << feat[i].score   << "\t"
 								  << feat[i].strand  << "\t"
-								  << id.substr(0,7)  << "\n";
+								  << id              << "\n";
 					}
 				}
 				prev_st = st;
