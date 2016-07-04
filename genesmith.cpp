@@ -94,7 +94,7 @@ double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, 
 		if (PROFILE != NULL) {
 			score += PSCALE * hmmer_score(ALPHABET, PROFILE, aa_seq, pos);
 		}
-		
+		/*
 		if (KOG_SEQ != NULL) {
 // 			printf("KOG: %s\n", KOG_SEQ);
 // 			printf("AA: %s\n", aa_seq);
@@ -121,6 +121,7 @@ double tb_eval (const std::string *genome, size_t pos, const std::string *mrna, 
 			
 			free(sub_kogseq);
 		}
+		*/
 		
 		free(aa_seq);
 		return score;
