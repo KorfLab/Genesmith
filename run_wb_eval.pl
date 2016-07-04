@@ -121,7 +121,7 @@ my $results = `eval_quick_compare.pl $gff_test $output_fh`;
 chomp($results);
 
 my @eval_stats = split("\n", $results);
-my $header     = ">$taxa\-$optinfo";
+my $header     = ">$TAXA\-$optinfo";
 print $header,   "\n";
 foreach my $stat (@eval_stats) {
 	print $stat, "\n";
