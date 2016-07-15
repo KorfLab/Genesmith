@@ -14,15 +14,15 @@ my $SPECIES = "C.elegans";
 #  - run an evaluation on every combination                       #
 #=================================================================#
 die "
-$0 [options] <DIR_PATH_test_train_sets>
+$0 [options] <DIR_PATH_test_train_sets> <wb_gene_summary_list.txt>
 
 universal parameters:
   -1           Convert for Standard to Basic HMM with 1 CDS state
   -S           Option to exclude start and stop states from basic model
   -h           help
-" unless @ARGV == 1;
-my ($DIR) = @ARGV;
-
+" unless @ARGV == 2;
+my ($DIR, $LIST) = @ARGV;
+$DIR .= "/" if $DIR !~ /\/$/;
 
 my $INTERGENIC = 1000; # max = 1000, min = 500
 my $L_DON      = 6;    # max = 9, min = 5
@@ -48,7 +48,7 @@ if ($opt_S) {
 										$cmd   .= "-S " if $opt_S;
 										$cmd   .= "-U $I -E $I -D $D -A $A ";    # Constant baseline parameters chosen for select species
 										$cmd   .= "-5 $u -c $c -d $d -i $i -a $a -3 $e ";
-										$cmd   .= "$SPECIES $DIR";
+										$cmd   .= "$DIR $LIST";
 										print $cmd, "\n";
 # 										push (@run_cmds, $cmd);
 									}
@@ -77,7 +77,7 @@ if ($opt_S) {
 												$cmd   .= "-U $I -E $I -D $D -A $A ";    # Constant baseline parameters chosen for select species
 												$cmd   .= "-5 $u -c $c -d $d -i $i -a $a -3 $e ";
 												$cmd   .= "-m $m -s $s ";
-												$cmd   .= "$SPECIES $DIR";
+												$cmd   .= "$DIR $LIST";
 												print $cmd, "\n";
 	# 											push (@run_cmds, $cmd);
 											}
