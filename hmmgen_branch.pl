@@ -125,26 +125,27 @@ foreach my $id (keys %gene_struc) {
 					my $post_motif = substr($in_body, $br_end+1, $in_body2_len);
 					my $seq = "";
 					if ($st =~ /branch_i0/) {
-						my $prev_seq = $exon . $don;
-						my $seq     .= substr($prev_seq, -$order, $order);
-						$seq        .= $pre_motif;
-						$states[$s]->emission($st, $order, $seq);
+						print ">>>$id\n", ">intron.$i\n", $pre_motif, "\n\n", $motif, "\n\n", $post_motif, "\n"; 
+# 						my $prev_seq = $exon . $don;
+# 						my $seq     .= substr($prev_seq, -$order, $order);
+# 						$seq        .= $pre_motif;
+# 						$states[$s]->emission($st, $order, $seq);
 					} elsif($st =~ /branch_i1/) {
-						$seq   .= substr($motif, -$order, $order);
-						$seq   .= $post_motif;
-						$states[$s]->emission($st, $order, $seq);
+# 						$seq   .= substr($motif, -$order, $order);
+# 						$seq   .= $post_motif;
+# 						$states[$s]->emission($st, $order, $seq);
 					} else {
-						$seq .= substr($pre_motif, -$order, $order);
-						$seq .= $motif;
-						$states[$s]->emission($st, $order, $seq);
+# 						$seq .= substr($pre_motif, -$order, $order);
+# 						$seq .= $motif;
+# 						$states[$s]->emission($st, $order, $seq);
 					}
 				} else {
-					if ($st =~ /branch_i2/) {
-						my $prev_seq = $exon . $don;
-						my $seq     .= substr($prev_seq, -$order, $order);
-						$seq        .= $in_body;
-						$states[$s]->emission($st, $order, $seq);
-					}
+# 					if ($st =~ /branch_i2/) {
+# 						my $prev_seq = $exon . $don;
+# 						my $seq     .= substr($prev_seq, -$order, $order);
+# 						$seq        .= $in_body;
+# 						$states[$s]->emission($st, $order, $seq);
+# 					}
 				}
 			}
 		}

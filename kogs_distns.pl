@@ -67,13 +67,12 @@ foreach my $kog (keys %genomic_len) {
 	$bp_len     = $genomic_len{$kog};
 	$aa_len     = $protein_len{$kog};
 	# KOG lengths
-	print KOG $TAXA,     "\t", $bp_len,   "\t", $aa_len, "\t", 
-	          $ex_quant, "\t", $in_quant, "\n";
-	          
+	print KOG $TAXA,     "\t", $kog,      "\t", $bp_len,   "\t", 
+	          $aa_len,   "\t", $ex_quant, "\t", $in_quant, "\n";
 	# CDS lengths
 	foreach my $cds (sort {$a<=>$b} keys %{$gene_struc{$kog}{Exons}}) {
 		my $cds_len = $gene_struc{$kog}{Exons}{$cds};
-		print CDS $TAXA, "\t", $cds, "\t", $cds_len, "\n";
+		print CDS $TAXA, "\t", $kog, "\t", $cds, "\t", $cds_len, "\n";
 	}
 	# Intron lengths
 	if ($in_quant == 0) {
@@ -81,7 +80,7 @@ foreach my $kog (keys %genomic_len) {
 	} else {
 		foreach my $intron (sort {$a<=>$b} keys %{$gene_struc{$kog}{Introns}}) {
 			my $in_len = $gene_struc{$kog}{Introns}{$intron};
-			print INTRON $TAXA, "\t", $intron, "\t", $in_len, "\n";
+			print INTRON $TAXA, "\t", $kog, "\t", $intron, "\t", $in_len, "\n";
 		}
 	}
 }
@@ -103,7 +102,7 @@ sub gene_lengths{
 	my $fasta = new FAlite(\*SEQ);
 	
 	while (my $entry = $fasta->nextEntry) {
-		my ($id) = $entry->def =~ /^>(\S+)$/;
+		my ($id) = $entry->def =~ /^>(\S+)/;
 		$gene_lengths{$id} = length($entry->seq);
 	}
 	return %gene_lengths;

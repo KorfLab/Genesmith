@@ -5,9 +5,11 @@ use Getopt::Std;
 use vars qw($opt_h $opt_1 $opt_S $opt_5 $opt_m $opt_c $opt_d $opt_i $opt_a $opt_s $opt_3 $opt_B $opt_b $opt_D $opt_A $opt_U $opt_E);
 getopts('h1S:5:m:c:d:i:a:s:3:Bb:D:A:U:E:');
 
+
 #========================================#
 # Genesmith Prediction using HMMER score #
 #========================================#
+my $TAXA        = "C.elegans";
 my $UP          = 0;     # Order Upstream
 my $START       = 0;     # Order Start, includes canonical ATG at the end, length = 3 + order
 my $EXON        = 0;     # Order CDS, always 3 states
@@ -26,7 +28,7 @@ my $SW_COEFF    = 1.0;
 
 
 die "
-usage: $0 [options] <TAXA> <DIR_PATH_TEST_TRAIN>
+usage: $0 [options] <DIR_PATH_test_train_sets> <wb_gene_summary_list.txt>
 
 universal parameters:
   -1           Convert for Standard to Basic HMM with 1 CDS state
@@ -62,7 +64,7 @@ $L_ACCEP     = $opt_A if $opt_A;
 $L_UP        = $opt_U if $opt_U;
 $L_DOWN      = $opt_E if $opt_E;
 
-my ($TAXA, $DIR) = @ARGV;
+my ($DIR, $LIST) = @ARGV;
 
 # Sanity Check - options
 if ($START       !~ /^\d+$/    or
@@ -85,7 +87,7 @@ $DIR .= "/" if $DIR !~ /\/$/;
 
 my $gff_train = "$DIR$TAXA\_train\.gff";
 my $fa_train  = "$DIR$TAXA\_train\.fa";
-my $gff_test  = "$DIR$TAXA\_test\.gff";
+my $gff_test  = "$DIR$TAXA\_test\.gtf";
 my $fa_test   = "$DIR$TAXA\_test\.fa";
 
 #-------------#
@@ -110,21 +112,30 @@ system("$cmd > $hmm_fh") == 0 or die;
 #-------------------#
 # Running Genesmith #
 #-------------------#
-my $output_fh = "$TAXA\_$optinfo\_pred.gff";
+my $output_fh  = "$TAXA\_$optinfo\_pred.gff";
+my $output_gtf = "$TAXA\_$optinfo\_pred.gtf";
 system("genesmith $hmm_fh $fa_test > $output_fh") == 0 or die;
-
+system("gff_to_gtf_wb.pl $output_fh $LIST > $output_gtf") == 0 or die;
 
 #----------------------------#
 # Evaluate Gene Predications #
 #----------------------------#
-my $results = `eval_quick_compare.pl $gff_test $output_fh`;
+my $results = `evaluate_gtf.pl -g -A $gff_test $output_gtf`;
 chomp($results);
 
 my @eval_stats = split("\n", $results);
 my $header     = ">$TAXA\-$optinfo";
 print $header,   "\n";
 foreach my $stat (@eval_stats) {
-	print $stat, "\n";
+	if ($stat =~ /^\*\*/ and $stat !~ /\*\*Summary\sStats\*\*/) {
+		last;
+	}
+	
+	if ($stat =~ /Gene\s|Transcript\s|Exon\s|Nucleotide\s/) {
+		print $stat, "\n";
+	} else {
+		next;
+	}
 }
 
 ### Remove Model and Prediction Files
