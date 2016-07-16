@@ -141,4 +141,5 @@ foreach my $stat (@eval_stats) {
 ### Remove Model and Prediction Files
 system("rm $hmm_fh") == 0 or die;
 system("rm $output_fh") == 0 or die;
+system("rm $output_gtf") == 0 or die;
 
