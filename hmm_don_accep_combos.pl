@@ -3,7 +3,7 @@ use strict;
 use warnings 'FATAL' => 'all';
 use Getopt::Std;
 use vars qw($opt_h $opt_1 $opt_S $opt_5 $opt_m $opt_c $opt_d $opt_i $opt_a $opt_s $opt_3 $opt_B $opt_b $opt_D $opt_A $opt_U $opt_E);
-getopts('h1S:5:m:c:d:i:a:s:3:Bb:D:A:U:E:');
+getopts('h1S5:m:c:d:i:a:s:3:Bb:D:A:U:E:');
 
 
 #========================================#
