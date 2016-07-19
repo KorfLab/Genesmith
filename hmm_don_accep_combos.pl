@@ -85,8 +85,8 @@ if ($START       !~ /^\d+$/    or
 }
 $DIR .= "/" if $DIR !~ /\/$/;
 
-my @l_don      = (2, 4, 6);           # set of donor state lengths to run
-my @l_accep    = (2, 5, 10, 15, 20);  # set of acceptor state lengths to run
+my @l_don      = (2, 4, 6, 9);            # set of donor state lengths to run
+my @l_accep    = (2, 5, 10, 15, 20, 30);  # set of acceptor state lengths to run
 
 if ($opt_S) {
 	for(my $D=0; $D < @l_don; $D++) {
