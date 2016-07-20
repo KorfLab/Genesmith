@@ -35,8 +35,8 @@ my $CPU        = 10;   # number of threads
 my @run_cmds;
 if ($opt_S) {
 	for(my $I=1000; $I < $INTERGENIC+1; $I+=1) {
-		for(my $D=6; $D < $L_DON+1; $D++) {
-			for(my $A=15; $A < $L_ACCEP+1; $A++) {
+		for(my $D=9; $D < $L_DON+1; $D++) {
+			for(my $A=30; $A < $L_ACCEP+1; $A++) {
 				for (my $u=0; $u < 2; $u++) {
 					for (my $c=3; $c < 6; $c++) {
 						for (my $d=0; $d < 2; $d++) {
@@ -62,8 +62,8 @@ if ($opt_S) {
 	}
 } else {
 	for(my $I=1000; $I < $INTERGENIC+1; $I+=1) {
-		for(my $D=6; $D < $L_DON+1; $D++) {
-			for(my $A=15; $A < $L_ACCEP+1; $A++) {
+		for(my $D=9; $D < $L_DON+1; $D++) {
+			for(my $A=30; $A < $L_ACCEP+1; $A++) {
 				for (my $u=0; $u < 2; $u++) {
 					for (my $m=0; $m < 2; $m++) {
 						for (my $c=3; $c < 6; $c++) {
