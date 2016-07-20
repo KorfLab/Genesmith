@@ -25,8 +25,8 @@ my ($DIR, $LIST) = @ARGV;
 $DIR .= "/" if $DIR !~ /\/$/;
 
 my $INTERGENIC = 1000; # max = 1000, min = 500
-my $L_DON      = 6;    # max = 9, min = 5
-my $L_ACCEP    = 15;   # max = 30, min = 10, supports states in increments of 5
+my $L_DON      = 9;    # max = 9, min = 5
+my $L_ACCEP    = 30;   # max = 30, min = 10, supports states in increments of 5
 # my @l_don      = (2, 4, 6);           # set of donor state lengths to run
 # my @l_accep    = (2, 5, 10, 15, 20);  # set of acceptor state lengths to run
 
