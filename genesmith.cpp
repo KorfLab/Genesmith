@@ -139,8 +139,8 @@ static void usage () {
 		<< "  -P <float> weight for profile HMM\n"
 		<< "  -s <file> protein for smith-waterman alignment\n"
 		<< "  -S <float> weight for smith-waterman\n" 
-		<< "  -V <size_t> number of repetitions used for Stochastic Viterbi, silence Viterbi"
 		<< "  -g <file> alternate genetic code\n"
+		<< "  -V <size_t> number of repetitions used for Stochastic Viterbi, silence Viterbi\n"
 		<< std::endl;
 	exit(1);
 }

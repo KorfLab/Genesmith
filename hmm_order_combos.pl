@@ -6,7 +6,6 @@ use vars qw($opt_h $opt_1 $opt_S);
 getopts('h1S');
 
 my $SPECIES = "C.elegans";
-#my $DIR = "/Network/Servers/raiden.genomecenter.ucdavis.edu/Users/ravi/scratch/Basic/";
 
 #=================================================================#
 # Purpose:                                                        #
@@ -30,9 +29,6 @@ my $L_ACCEP    = 30;   # max = 30, min = 10, supports states in increments of 5
 # my @l_don      = (2, 4, 6);           # set of donor state lengths to run
 # my @l_accep    = (2, 5, 10, 15, 20);  # set of acceptor state lengths to run
 
-my $CPU        = 10;   # number of threads
-
-my @run_cmds;
 if ($opt_S) {
 	for(my $I=1000; $I < $INTERGENIC+1; $I+=1) {
 		for(my $D=9; $D < $L_DON+1; $D++) {
@@ -50,7 +46,6 @@ if ($opt_S) {
 										$cmd   .= "-5 $u -c $c -d $d -i $i -a $a -3 $e ";
 										$cmd   .= "$DIR $LIST";
 										print $cmd, "\n";
-# 										push (@run_cmds, $cmd);
 									}
 								}
 							}
@@ -79,7 +74,6 @@ if ($opt_S) {
 												$cmd   .= "-m $m -s $s ";
 												$cmd   .= "$DIR $LIST";
 												print $cmd, "\n";
-	# 											push (@run_cmds, $cmd);
 											}
 										}
 									}
@@ -93,36 +87,6 @@ if ($opt_S) {
 	}
 }
 
-# Divide up combinations into 4 sets, each for one CPU
-# my $set_size = int(scalar(@run_cmds)/$CPU);
-# my $quant;
-# 
-# for(my $i=0; $i < $CPU; $i++) {
-# 	my $pos = $set_size * $i;
-# 	if ($i == $CPU - 1) {$quant = scalar(@run_cmds) - $pos;}
-# 	else                {$quant = $set_size;}
-# 	
-# 	open(BASH, ">cmd_list$i\.sh") or die "Error writing into BASH\n";
-# 	print BASH "#!/bin/bash\n\n";
-# 	my $count;
-# 	for(my $r=0; $r < scalar(@run_cmds); $r++) {
-# 		if ($r >= $pos and $r < ($pos + $quant)) {
-# 			print BASH $run_cmds[$r], "\n";
-# 			$count++;
-# 		}
-# 	}
-# 	close BASH;
-# 	print "LIST$i\: ", $count, "\n";
-# 	`chmod 755 cmd_list$i\.sh`;
-# }
-
-
-# print "\nCOMBOS:  ", scalar(@run_cmds), "\n";
-# my $sec = scalar(@run_cmds) * 193;
-# my $minutes = $sec/60;
-# my $hours = $minutes/60;
-# my $days = $hours/24;
-# print "Days:  ", $days, "\n";
 
 __END__
 # Example run on Saetta
